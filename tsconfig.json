@@ -16,7 +16,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": false,
-    "types": ["vitest/globals", "vite-plugin-pwa/react"]
+    "types": ["vitest/globals", "vite/client"]
   },
   "include": ["src"]
 }

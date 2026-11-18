@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Mascot } from '../brand/Mascot';
+import { PwaUpdateBanner } from '../ui/PwaUpdateBanner';
 import { Toast } from '../ui/Toast';
 import { BottomNav } from './BottomNav';
 
@@ -53,6 +54,7 @@ export function AppShell({
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-[var(--bg)] text-[var(--ink)]">
+      <PwaUpdateBanner />
       <div className="flex flex-1 flex-col px-5 pb-[148px]">{children}</div>
       <Toast />
       {showNav && <BottomNav />}

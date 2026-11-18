@@ -1,3 +1,192 @@
+import { useSyncExternalStore } from 'react';
+
+export interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
+export interface PwaStatusSnapshot {
+  isStandalone: boolean;
+  canPromptInstall: boolean;
+  swRegistered: boolean;
+  isSecure: boolean;
+  waitingWorker: ServiceWorker | null;
+}
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
+let waitingWorker: ServiceWorker | null = null;
+let swRegistered = false;
+let isStandalone = false;
+let initialized = false;
+
+const listeners = new Set<() => void>();
+
+let currentSnapshot: PwaStatusSnapshot = {
+  isStandalone: false,
+  canPromptInstall: false,
+  swRegistered: false,
+  isSecure: true,
+  waitingWorker: null,
+};
+
+function updateSnapshot(): void {
+  const isSecure =
+    typeof window !== 'undefined' ? Boolean(window.isSecureContext) : true;
+
+  currentSnapshot = {
+    isStandalone,
+    canPromptInstall: deferredPrompt !== null,
+    swRegistered,
+    isSecure,
+    waitingWorker,
+  };
+
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+function detectStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  const matchStandalone =
+    typeof window.matchMedia === 'function' &&
+    (window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches);
+  const iosStandalone =
+    typeof navigator !== 'undefined' &&
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return Boolean(matchStandalone || iosStandalone);
+}
+
+export function initPwaSupport(): void {
+  if (initialized || typeof window === 'undefined') return;
+  initialized = true;
+
+  isStandalone = detectStandalone();
+  updateSnapshot();
+
+  if (typeof window.matchMedia === 'function') {
+    const mq = window.matchMedia('(display-mode: standalone)');
+    mq.addEventListener('change', (e) => {
+      isStandalone = e.matches;
+      updateSnapshot();
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e as BeforeInstallPromptEvent;
+    updateSnapshot();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    isStandalone = true;
+    updateSnapshot();
+  });
+
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    const swUrl = import.meta.env.PROD ? '/sw.js' : '/dev-sw.js';
+
+    navigator.serviceWorker
+      .register(swUrl, { scope: '/' })
+      .then((registration) => {
+        swRegistered = true;
+        if (registration.waiting) {
+          waitingWorker = registration.waiting;
+        }
+
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+
+          newWorker.addEventListener('statechange', () => {
+            if (
+              newWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
+              waitingWorker = newWorker;
+              updateSnapshot();
+            }
+          });
+        });
+
+        updateSnapshot();
+      })
+      .catch(() => {
+        // Fallback to dev-sw.js if sw.js was not built yet
+        if (swUrl !== '/dev-sw.js') {
+          navigator.serviceWorker
+            .register('/dev-sw.js', { scope: '/' })
+            .then(() => {
+              swRegistered = true;
+              updateSnapshot();
+            })
+            .catch(() => {});
+        }
+      });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  }
+}
+
+export async function triggerNativePwaInstall(): Promise<
+  'accepted' | 'dismissed' | 'unavailable'
+> {
+  if (!deferredPrompt) return 'unavailable';
+  const promptEvent = deferredPrompt;
+  await promptEvent.prompt();
+  const choice = await promptEvent.userChoice;
+  if (choice.outcome === 'accepted') {
+    deferredPrompt = null;
+    updateSnapshot();
+    return 'accepted';
+  }
+  updateSnapshot();
+  return 'dismissed';
+}
+
+export function applyWaitingServiceWorker(): void {
+  if (waitingWorker) {
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  }
+}
+
+export function dismissWaitingServiceWorker(): void {
+  waitingWorker = null;
+  updateSnapshot();
+}
+
+function subscribePwa(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getPwaSnapshot(): PwaStatusSnapshot {
+  return currentSnapshot;
+}
+
+export function usePwaStatus(): PwaStatusSnapshot {
+  return useSyncExternalStore(subscribePwa, getPwaSnapshot, getPwaSnapshot);
+}
+
+export function isInAppWebView(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /(FBAN|FBAV|Instagram|Line\/|WhatsApp|Telegram|TikTok|wv\))/i.test(ua);
+}
+
 export async function requestPersistentStorage(): Promise<boolean> {
   try {
     if (

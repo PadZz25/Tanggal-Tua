@@ -6,6 +6,9 @@ import '@fontsource/plus-jakarta-sans/latin-700.css';
 import '@fontsource/plus-jakarta-sans/latin-800.css';
 import './styles/globals.css';
 import { App } from './app/App';
+import { initPwaSupport } from './lib/pwa';
+
+initPwaSupport();
 
 const rootEl = document.getElementById('root');
 if (rootEl) {

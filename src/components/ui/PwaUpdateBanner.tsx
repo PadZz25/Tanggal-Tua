@@ -1,76 +1,14 @@
-import { useEffect, useState } from 'react';
 import { UI_STRINGS } from '../../domain/copy';
+import {
+  applyWaitingServiceWorker,
+  dismissWaitingServiceWorker,
+  usePwaStatus,
+} from '../../lib/pwa';
 
 export function PwaUpdateBanner() {
-  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
-  const [dismissed, setDismissed] = useState(false);
+  const { waitingWorker } = usePwaStatus();
 
-  useEffect(() => {
-    if (
-      typeof window === 'undefined' ||
-      typeof navigator === 'undefined' ||
-      !('serviceWorker' in navigator) ||
-      !import.meta.env.PROD
-    ) {
-      return;
-    }
-
-    let isMounted = true;
-
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((registration) => {
-        if (!isMounted) return;
-
-        if (registration.waiting) {
-          setWaitingWorker(registration.waiting);
-        }
-
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (!newWorker) return;
-
-          newWorker.addEventListener('statechange', () => {
-            if (
-              newWorker.state === 'installed' &&
-              navigator.serviceWorker.controller &&
-              isMounted
-            ) {
-              setWaitingWorker(newWorker);
-            }
-          });
-        });
-      })
-      .catch(() => {
-        // Ignore service worker registration errors in unsupported environments
-      });
-
-    let refreshing = false;
-    const handleControllerChange = () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    };
-
-    navigator.serviceWorker.addEventListener(
-      'controllerchange',
-      handleControllerChange
-    );
-
-    return () => {
-      isMounted = false;
-      navigator.serviceWorker.removeEventListener(
-        'controllerchange',
-        handleControllerChange
-      );
-    };
-  }, []);
-
-  if (!waitingWorker || dismissed) return null;
-
-  const handleReload = () => {
-    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-  };
+  if (!waitingWorker) return null;
 
   return (
     <div
@@ -83,14 +21,14 @@ export function PwaUpdateBanner() {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={handleReload}
+            onClick={applyWaitingServiceWorker}
             className="min-h-[38px] rounded-[14px] bg-[var(--coin)] px-3 text-[13px] font-extrabold text-[var(--coin-ink)]"
           >
             Muat ulang
           </button>
           <button
             type="button"
-            onClick={() => setDismissed(true)}
+            onClick={dismissWaitingServiceWorker}
             aria-label="Tutup pemberitahuan versi baru"
             className="min-h-[38px] px-2 text-[12px] font-semibold underline"
           >

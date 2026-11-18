@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { Wordmark } from '../../components/brand/Wordmark';
+import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
 import { completeOnboarding } from '../../data/repositories/settings';
 import { computeAllowance } from '../../domain/allowance';
 import { addDays, daysBetween, defaultNextPayday, parseDateParts } from '../../domain/dates';
@@ -95,29 +96,32 @@ export function OnboardingPage({
   return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col justify-between bg-[var(--bg)] px-5 py-6 text-[var(--ink)]">
       <div>
-        <header className="flex items-center justify-between">
+        <header className="flex items-center justify-between gap-2">
           <Wordmark mood="smile" />
-          {step <= 3 && (
-            <nav aria-label="Langkah persiapan">
-              <ol className="flex items-center gap-1.5">
-                {[1, 2, 3].map((idx) => (
-                  <li
-                    key={idx}
-                    aria-current={step === idx ? 'step' : undefined}
-                    className={`h-2 rounded-full transition-all ${
-                      step === idx
-                        ? 'w-6 bg-[var(--primary)]'
-                        : step > idx
-                          ? 'w-2 bg-[var(--primary)] opacity-60'
-                          : 'w-2 bg-[var(--border-control)] opacity-40'
-                    }`}
-                  >
-                    <span className="visually-hidden">Langkah {idx} dari 3</span>
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          )}
+          <div className="flex items-center gap-2.5">
+            <InstallPwaButton variant="compact" />
+            {step <= 3 && (
+              <nav aria-label="Langkah persiapan">
+                <ol className="flex items-center gap-1.5">
+                  {[1, 2, 3].map((idx) => (
+                    <li
+                      key={idx}
+                      aria-current={step === idx ? 'step' : undefined}
+                      className={`h-2 rounded-full transition-all ${
+                        step === idx
+                          ? 'w-6 bg-[var(--primary)]'
+                          : step > idx
+                            ? 'w-2 bg-[var(--primary)] opacity-60'
+                            : 'w-2 bg-[var(--border-control)] opacity-40'
+                      }`}
+                    >
+                      <span className="visually-hidden">Langkah {idx} dari 3</span>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
+          </div>
         </header>
 
         {step === 1 && (

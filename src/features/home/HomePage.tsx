@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wordmark } from '../../components/brand/Wordmark';
+import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
 import { Sheet } from '../../components/ui/Sheet';
 import { createTemplate } from '../../data/repositories/templates';
 import { isValidAmount, parseNominalInput } from '../../domain/money';
@@ -56,16 +57,19 @@ export function HomePage({ live }: HomePageProps) {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between">
+      <header className="flex h-16 items-center justify-between gap-2">
         <Wordmark mood={live.homeState.mood} />
-        <button
-          type="button"
-          onClick={() => openTransactionSheet({ defaultType: 'expense' })}
-          aria-label="Tambah transaksi lengkap"
-          className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[var(--border-control)] bg-[var(--surface)] text-[var(--ink)] transition-colors hover:bg-[var(--border-soft)] active:scale-95"
-        >
-          <Plus size={20} strokeWidth={2.3} aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-2">
+          <InstallPwaButton variant="compact" />
+          <button
+            type="button"
+            onClick={() => openTransactionSheet({ defaultType: 'expense' })}
+            aria-label="Tambah transaksi lengkap"
+            className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[var(--border-control)] bg-[var(--surface)] text-[var(--ink)] transition-colors hover:bg-[var(--border-soft)] active:scale-95"
+          >
+            <Plus size={20} strokeWidth={2.3} aria-hidden="true" />
+          </button>
+        </div>
       </header>
 
       <HeroCard

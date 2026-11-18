@@ -10,6 +10,7 @@ import {
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
+import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
 import { Sheet } from '../../components/ui/Sheet';
 import {
   exportToCsv,
@@ -233,6 +234,8 @@ export function SettingsPage({ live }: SettingsPageProps) {
           Sesuaikan tampilan, jadwal kiriman, saldo, dan cadangan datamu.
         </p>
       </header>
+
+      <InstallPwaButton variant="card" />
 
       {/* 1. Tampilan */}
       <section

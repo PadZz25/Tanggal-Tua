@@ -1,10 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
-import { db } from '../data/db';
-import { checkAndRollPayday } from '../data/repositories/settings';
+import { db, openDatabaseSafely } from '../data/db';
+import {
+  checkAndRollPayday,
+  mergeWithDefaultSettings,
+} from '../data/repositories/settings';
 import { sortTopTemplates } from '../data/repositories/templates';
-import { createDefaultSettings, ensureSeeded } from '../data/seed';
+import { DEFAULT_TEMPLATES, ensureSeeded } from '../data/seed';
 import { computeBalances, getHomeState } from '../domain/allowance';
+import { DEFAULT_CATEGORIES } from '../domain/parser/keywords';
 import type {
   Category,
   HomeStateResult,
@@ -14,6 +18,35 @@ import type {
 } from '../domain/types';
 import { useToday } from './useToday';
 import { useUIStore } from './useUIStore';
+
+export const DEFAULT_BOOTSTRAP_TIMEOUT_MS = 5_000;
+
+export interface LoadedAppSnapshot {
+  settings: Settings;
+  categories: Category[];
+  templates: Template[];
+  allTransactions: Transaction[];
+  hasSettingsRow: boolean;
+}
+
+export async function loadAppSnapshot(currentToday: string): Promise<LoadedAppSnapshot> {
+  await openDatabaseSafely();
+
+  const [rawSettings, rawCategories, rawTemplates, allTransactions] = await Promise.all([
+    db.settings.get('main'),
+    db.categories.orderBy('order').toArray(),
+    db.templates.orderBy('order').toArray(),
+    db.transactions.toArray(),
+  ]);
+
+  return {
+    settings: mergeWithDefaultSettings(rawSettings, currentToday),
+    categories: rawCategories.length > 0 ? rawCategories : DEFAULT_CATEGORIES,
+    templates: rawTemplates.length > 0 ? rawTemplates : DEFAULT_TEMPLATES,
+    allTransactions,
+    hasSettingsRow: rawSettings !== undefined,
+  };
+}
 
 export interface AppLiveState {
   isLoading: boolean;
@@ -34,15 +67,31 @@ export function useHomeState(): AppLiveState {
   const pendingDeleteIds = useUIStore((s) => s.pendingDeleteIds);
   const setPaydayRolledBanner = useUIStore((s) => s.setPaydayRolledBanner);
   const [initError, setInitError] = useState<string | null>(null);
+  const [bootstrapReady, setBootstrapReady] = useState(false);
 
   useEffect(() => {
     let active = true;
-    ensureSeeded(currentToday)
+
+    const handleBlocked = (e: Event) => {
+      if (!active) return;
+      const detail = (e as CustomEvent<string>).detail;
+      setInitError(
+        detail ||
+          'Database lokal sedang terkunci oleh tab lain. Tutup tab lain atau muat ulang.'
+      );
+    };
+
+    window.addEventListener('tanggal-tua-db-blocked', handleBlocked);
+
+    openDatabaseSafely()
+      .then(() => ensureSeeded(currentToday))
       .then(() => checkAndRollPayday(currentToday))
       .then((res) => {
-        if (active && res.rolled) {
+        if (!active) return;
+        if (res.rolled) {
           setPaydayRolledBanner(true);
         }
+        setBootstrapReady(true);
       })
       .catch((err: unknown) => {
         if (active) {
@@ -56,29 +105,50 @@ export function useHomeState(): AppLiveState {
 
     return () => {
       active = false;
+      window.removeEventListener('tanggal-tua-db-blocked', handleBlocked);
     };
   }, [currentToday, setPaydayRolledBanner]);
 
   const queryData = useLiveQuery(async () => {
-    const [settings, categories, templates, allTransactions] = await Promise.all([
-      db.settings.get('main'),
-      db.categories.orderBy('order').toArray(),
-      db.templates.orderBy('order').toArray(),
-      db.transactions.toArray(),
-    ]);
-
-    return {
-      settings: settings ?? createDefaultSettings(currentToday),
-      categories,
-      templates,
-      allTransactions,
-    };
+    try {
+      return await loadAppSnapshot(currentToday);
+    } catch (err: unknown) {
+      setInitError(
+        err instanceof Error
+          ? err.message
+          : 'Gagal membaca data dari penyimpanan lokal.'
+      );
+      return null;
+    }
   }, [currentToday]);
 
-  const isLoading = queryData === undefined && initError === null;
-  const settings = queryData?.settings ?? createDefaultSettings(currentToday);
-  const categories = queryData?.categories ?? [];
-  const templates = queryData?.templates ?? [];
+  const isLoading = queryData === undefined && !bootstrapReady && initError === null;
+
+  useEffect(() => {
+    if (!isLoading || initError !== null) return;
+
+    const timeoutMs =
+      (typeof window !== 'undefined' && window.__TANGGAL_TUA_BOOTSTRAP_TIMEOUT_MS__) ||
+      DEFAULT_BOOTSTRAP_TIMEOUT_MS;
+
+    const timer = window.setTimeout(() => {
+      setInitError(
+        'Waktu memuat aplikasi habis (lebih dari 5 detik). Penyimpanan lokal mungkin sedang terkunci atau cache perlu disegarkan.'
+      );
+    }, timeoutMs);
+
+    return () => window.clearTimeout(timer);
+  }, [isLoading, initError]);
+
+  const settings = mergeWithDefaultSettings(queryData?.settings, currentToday);
+  const categories =
+    queryData?.categories && queryData.categories.length > 0
+      ? queryData.categories
+      : DEFAULT_CATEGORIES;
+  const templates =
+    queryData?.templates && queryData.templates.length > 0
+      ? queryData.templates
+      : DEFAULT_TEMPLATES;
 
   const visibleTransactions = (queryData?.allTransactions ?? [])
     .filter((tx) => !pendingDeleteIds.includes(tx.id))

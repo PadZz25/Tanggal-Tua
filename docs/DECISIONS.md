@@ -29,3 +29,15 @@ Dokumen ini mencatat keputusan arsitektur, desain, dan penyempurnaan spesifikasi
   - Apabila hasil parse memakai kata `kemarin` pada hari pertama onboarding (`date < openingDate`), transaksi ditolak dengan pesan ramah bahwa saldo awal sudah mencakup kondisi sebelum hari ini.
 - **Keputusan 6 (Konvensi Git Commit):**
   - Atas permintaan pemilik proyek, setiap selesai fitur/milestone dilakukan commit Git dengan format *Conventional Commits* berbahasa Indonesia yang alami dan lugas.
+
+## 2026-11-18: Diagnosis & Perbaikan Bug A dan Bug B
+
+- **Tanggal:** 2026-11-18
+- **Akar Masalah Bug A (Penanda Tema di Pengaturan):**
+  - Kontrol pilihan tema di `SettingsPage.tsx` sebelumnya memakai `role="group"` dengan `aria-pressed` dan memanggil `applyThemeToDocument(theme)` sebelum `updateSettings({ theme })` selesai memperbarui Dexie. Selain itu, warna tombol aktif pada mode gelap (`--primary-tint: #262C5E`) terlalu dekat dengan permukaan kartu (`--surface: #1E1A16`) tanpa ikon penanda.
+  - **Solusi:** Menjadikan `settings.theme` (dinormalisasi lewat `normalizeThemePreference`) sebagai satu-satunya sumber kebenaran baik untuk `role="radiogroup"` / `role="radio"` (`aria-checked`) maupun atribut `document.documentElement.dataset.theme`, serta memakai latar kontras `--primary` dan ikon centang pada opsi terpilih.
+- **Akar Masalah Bug B (Loading Tanpa Akhir Setelah Refresh):**
+  1. `useHomeState.ts` sebelumnya menentukan `isLoading = queryData === undefined && initError === null`. Ketika `useLiveQuery` mengalami penolakan promise atau tertahan karena koneksi IndexedDB yang belum tertutup saat refresh (`versionchange` / `blocked` belum ditangani di `db.ts`), `useLiveQuery` terus mengembalikan `undefined` selamanya tanpa memicu `initError`.
+  2. Konfigurasi Workbox sebelumnya mencampur `registerType: 'prompt'` dengan `clientsClaim: true` tanpa `skipWaiting: false` yang eksplisit, serta `dev-sw.js` melakukan `skipWaiting()` tanpa pesan konfirmasi pengguna, sehingga saat refresh di rute pecahan (`React.lazy` seperti `/pengaturan`), siklus hidup Service Worker dan bootstrap DB dapat berbenturan tanpa *ErrorBoundary* atau batas waktu (*timeout*).
+  3. `updateSettings` sebelumnya menimpa seluruh baris `db.settings.put(...)` alih-alih melakukan pembaruan parsial `db.settings.update('main', patch)` dan penggabungan default `{ ...DEFAULTS, ...row }` saat pembacaan.
+  - **Solusi:** Menambahkan penanganan `db.on('versionchange')` (menutup koneksi lama) dan `db.on('blocked')`, pembaruan parsial `db.settings.update`, fungsi `mergeWithDefaultSettings`, batas waktu bootstrap 5 detik, `AppErrorBoundary` di root, serta layar pemulihan `"Gagal memuat"` dengan tombol `"Muat ulang"` dan `"Reset cache aplikasi"` (menghapus Service Worker & Cache Storage tanpa menyentuh data IndexedDB pengguna).

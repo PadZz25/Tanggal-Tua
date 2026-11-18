@@ -89,6 +89,17 @@ export function initPwaSupport(): void {
     updateSnapshot();
   });
 
+  window.addEventListener('tanggal-tua-sw-update-waiting', () => {
+    waitingWorker = {
+      postMessage: (msg: { type?: string }) => {
+        if (msg?.type === 'SKIP_WAITING') {
+          window.location.reload();
+        }
+      },
+    } as unknown as ServiceWorker;
+    updateSnapshot();
+  });
+
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     const swUrl = import.meta.env.PROD ? '/sw.js' : '/dev-sw.js';
 
@@ -185,6 +196,26 @@ export function isInAppWebView(): boolean {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
   return /(FBAN|FBAV|Instagram|Line\/|WhatsApp|Telegram|TikTok|wv\))/i.test(ua);
+}
+
+export async function resetApplicationCache(): Promise<void> {
+  try {
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((reg) => reg.unregister()));
+    }
+  } catch {
+    // Ignore SW unregister errors
+  }
+
+  try {
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      const keys = await window.caches.keys();
+      await Promise.all(keys.map((key) => window.caches.delete(key)));
+    }
+  } catch {
+    // Ignore Cache Storage deletion errors
+  }
 }
 
 export async function requestPersistentStorage(): Promise<boolean> {

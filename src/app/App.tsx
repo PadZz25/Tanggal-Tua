@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Mascot } from '../components/brand/Mascot';
+import { AppErrorBoundary } from '../components/layout/AppErrorBoundary';
 import { AppShell } from '../components/layout/AppShell';
+import { PwaUpdateBanner } from '../components/ui/PwaUpdateBanner';
 import { UI_STRINGS } from '../domain/copy';
 import { HomePage } from '../features/home/HomePage';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage';
@@ -41,18 +43,21 @@ export function AppRoutes() {
 
   if (!live.settings.hasOnboarded) {
     return (
-      <Routes>
-        <Route
-          path="/onboarding"
-          element={
-            <OnboardingPage
-              today={live.today}
-              initialTheme={live.settings.theme}
-            />
-          }
-        />
-        <Route path="*" element={<Navigate to="/onboarding" replace />} />
-      </Routes>
+      <>
+        <PwaUpdateBanner />
+        <Routes>
+          <Route
+            path="/onboarding"
+            element={
+              <OnboardingPage
+                today={live.today}
+                initialTheme={live.settings.theme}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        </Routes>
+      </>
     );
   }
 
@@ -80,8 +85,10 @@ export function AppRoutes() {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AppErrorBoundary>
   );
 }

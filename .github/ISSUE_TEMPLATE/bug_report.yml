@@ -1,0 +1,30 @@
+name: Laporan Bug
+description: Laporkan kendala atau perilaku aplikasi yang tidak sesuai
+title: '[Bug]: '
+labels: ['bug']
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Apa yang terjadi?
+      description: Jelaskan masalah yang Anda temui secara singkat.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Langkah Reproduksi
+      description: Bagaimana cara memunculkan kembali masalah tersebut?
+      placeholder: |
+        1. Buka halaman Beranda
+        2. Ketik '...' di kolom catat cepat
+        3. Tekan kirim
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Perangkat & Browser
+      placeholder: Mis. Android 15 / Chrome 132, atau iOS 18 / Safari
+    validations:
+      required: false

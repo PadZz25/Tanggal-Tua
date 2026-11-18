@@ -1,0 +1,19 @@
+name: Usulan Fitur
+description: Ajukan ide perbaikan atau fitur baru untuk Tanggal Tua
+title: '[Fitur]: '
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Masalah yang Ingin Diselesaikan
+      description: Ceritakan situasi sehari-hari yang membuat fitur ini dibutuhkan.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Usulan Solusi
+      description: Bagaimana menurut Anda fitur ini sebaiknya bekerja tanpa membuat pencatatan jadi rumit?
+    validations:
+      required: true

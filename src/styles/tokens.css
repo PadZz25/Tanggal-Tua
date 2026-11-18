@@ -1,0 +1,90 @@
+:root {
+  color-scheme: light dark;
+
+  --bg: #FAF5EC;
+  --surface: #FFFFFF;
+  --border: #E6DCCB;
+  --border-soft: #F1E9DA;
+  --border-control: #8C7D6E;
+  --ink: #231C16;
+  --muted: #6B5E52;
+  --primary: #2B3A8C;
+  --primary-tint: #E3E7FB;
+  --on-primary: #FFFFFF;
+  --coin: #F2B33D;
+  --coin-edge: #C98A1B;
+  --coin-ink: #231C16;
+  --warm: #9E3F27;
+  --hero-bg: var(--primary);
+  --hero-ink: #FFFFFF;
+  --hero-track: rgba(255, 255, 255, 0.22);
+  --hero-chip: rgba(255, 255, 255, 0.16);
+
+  --tone-makan-bg: #FDE7C2;
+  --tone-makan-ink: #7A4300;
+  --tone-transport-bg: #DDE2FA;
+  --tone-transport-ink: #2B3A8C;
+  --tone-jajan-bg: #EAD9C8;
+  --tone-jajan-ink: #5A3A24;
+  --tone-kosan-bg: #D9EBDD;
+  --tone-kosan-ink: #1F5A36;
+  --tone-paketan-bg: #E6DDF5;
+  --tone-paketan-ink: #4B2E83;
+  --tone-kuliah-bg: #D8EEF2;
+  --tone-kuliah-ink: #17566B;
+  --tone-belanja-bg: #F6DADA;
+  --tone-belanja-ink: #8A2F2F;
+  --tone-hiburan-bg: #FBE3EE;
+  --tone-hiburan-ink: #8A2A5B;
+  --tone-lainnya-bg: #ECE6DC;
+  --tone-lainnya-ink: #5B5146;
+
+  &:has(> head > meta[name="color-scheme"][content="dark"]) {
+    color-scheme: dark;
+  }
+  &:has(> head > meta[name="color-scheme"][content="light"]) {
+    color-scheme: light;
+  }
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #14110E;
+  --surface: #1E1A16;
+  --border: #2E2822;
+  --border-soft: #2A241E;
+  --border-control: #7A6E62;
+  --ink: #F6EFE4;
+  --muted: #B8AB9B;
+  --primary: #A9B4FF;
+  --primary-tint: #262C5E;
+  --on-primary: #14110E;
+  --coin: #F5C04D;
+  --coin-edge: #C98A1B;
+  --coin-ink: #231C16;
+  --warm: #9E3F27;
+  --hero-bg: rgba(154, 167, 255, 0.14);
+  --hero-ink: #FFFFFF;
+  --hero-track: rgba(255, 255, 255, 0.18);
+  --hero-chip: rgba(255, 255, 255, 0.12);
+
+  --tone-makan-bg: #3B2A12;
+  --tone-makan-ink: #F5C04D;
+  --tone-transport-bg: #262C5E;
+  --tone-transport-ink: #A9B4FF;
+  --tone-jajan-bg: #3A2B20;
+  --tone-jajan-ink: #E3C2A0;
+  --tone-kosan-bg: #1A3324;
+  --tone-kosan-ink: #8CE0A8;
+  --tone-paketan-bg: #2D2246;
+  --tone-paketan-ink: #D4BFFF;
+  --tone-kuliah-bg: #18343E;
+  --tone-kuliah-ink: #89D9F2;
+  --tone-belanja-bg: #3D1F1F;
+  --tone-belanja-ink: #F8A9A9;
+  --tone-hiburan-bg: #3D1D2E;
+  --tone-hiburan-ink: #F7A8D0;
+  --tone-lainnya-bg: #2E2923;
+  --tone-lainnya-ink: #D4C8B8;
+}

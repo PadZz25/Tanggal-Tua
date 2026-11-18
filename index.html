@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        var saved = localStorage.getItem('tanggal-tua-theme');
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        var isDark =
+          saved === 'dark' ||
+          ((!saved || saved === 'system') &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        if (meta) {
+          meta.setAttribute(
+            'content',
+            saved === 'dark' ? 'dark' : saved === 'light' ? 'light' : 'light dark'
+          );
+        }
+      } catch (e) {}
+    </script>
+    <meta name="theme-color" content="#2B3A8C" />
+    <meta name="description" content="Catat uang jajan, tahu sisa jatah hari ini." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Tanggal Tua" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <title>Tanggal Tua · Sisa Jatah Harian</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

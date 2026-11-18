@@ -47,11 +47,11 @@ export function QuickChips({
   };
 
   return (
-    <section aria-label={UI_STRINGS.quickSectionLabel} className="mt-4">
+    <section aria-label={UI_STRINGS.quickSectionLabel} className="mt-3">
       <h2 className="text-[13px] font-bold text-[var(--muted)]">
         {UI_STRINGS.quickSectionLabel}
       </h2>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
         {templates.map((tpl) => (
           <button
             key={tpl.id}

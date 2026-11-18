@@ -23,13 +23,13 @@ export async function createTemplate(input: {
   categoryId: string;
 }): Promise<Template> {
   const all = await getAllTemplates();
-  const maxOrder = all.reduce((max, t) => Math.max(max, t.order), 0);
+  const minOrder = all.reduce((min, t) => Math.min(min, t.order), 1);
   const template: Template = {
     id: crypto.randomUUID(),
     label: input.label.trim().slice(0, 40),
     amount: Math.trunc(input.amount),
     categoryId: input.categoryId,
-    order: maxOrder + 1,
+    order: minOrder - 1,
     usageCount: 0,
   };
   await db.templates.put(template);

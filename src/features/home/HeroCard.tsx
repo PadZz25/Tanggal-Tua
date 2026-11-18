@@ -101,7 +101,7 @@ export function HeroCard({
   return (
     <section
       aria-label="Ringkasan jatah harian"
-      className="relative mt-4 overflow-hidden rounded-[28px]"
+      className="relative mt-2 overflow-hidden rounded-[28px]"
     >
       {!isWarmState && (
         <div
@@ -115,7 +115,7 @@ export function HeroCard({
           backgroundColor: isWarmState ? 'var(--warm)' : 'var(--hero-bg)',
           color: 'var(--hero-ink)',
         }}
-        className={`relative rounded-[28px] p-[22px] transition-colors duration-300 ${
+        className={`relative rounded-[28px] p-5 transition-colors duration-300 ${
           !isWarmState
             ? '[[data-theme=dark]_&]:border [[data-theme=dark]_&]:border-[rgba(169,180,255,0.28)] [[data-theme=dark]_&]:backdrop-blur-[24px]'
             : ''

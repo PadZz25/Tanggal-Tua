@@ -1,13 +1,14 @@
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   Download,
   Pencil,
   Plus,
   Trash2,
   Upload,
 } from 'lucide-react';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
@@ -37,7 +38,10 @@ import {
 } from '../../domain/money';
 import type { Template, ThemePreference } from '../../domain/types';
 import type { AppLiveState } from '../../hooks/useHomeState';
-import { applyThemeToDocument } from '../../hooks/useTheme';
+import {
+  applyThemeToDocument,
+  normalizeThemePreference,
+} from '../../hooks/useTheme';
 import { useUIStore } from '../../hooks/useUIStore';
 
 interface SettingsPageProps {
@@ -82,11 +86,35 @@ export function SettingsPage({ live }: SettingsPageProps) {
   const [resetStep, setResetStep] = useState<0 | 1>(0);
 
   const expenseCategories = live.categories.filter((c) => c.kind === 'expense');
+  const currentTheme = normalizeThemePreference(live.settings.theme);
+
+  const THEME_OPTIONS = [
+    { id: 'system', label: 'Sistem' },
+    { id: 'light', label: 'Terang' },
+    { id: 'dark', label: 'Gelap' },
+  ] as const;
 
   const handleThemeSelect = async (theme: ThemePreference) => {
-    applyThemeToDocument(theme);
-    await updateSettings({ theme });
+    const normalized = normalizeThemePreference(theme);
+    await updateSettings({ theme: normalized });
+    applyThemeToDocument(normalized);
     showToast({ message: 'Tema tampilan diperbarui' });
+  };
+
+  const handleThemeKeyDown = (
+    e: KeyboardEvent<HTMLButtonElement>,
+    index: number
+  ) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = THEME_OPTIONS[(index + 1) % THEME_OPTIONS.length];
+      void handleThemeSelect(next.id);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev =
+        THEME_OPTIONS[(index - 1 + THEME_OPTIONS.length) % THEME_OPTIONS.length];
+      void handleThemeSelect(prev.id);
+    }
   };
 
   const handleSavePayday = async (e: FormEvent) => {
@@ -249,31 +277,42 @@ export function SettingsPage({ live }: SettingsPageProps) {
           Tampilan
         </h2>
         <div
-          role="group"
-          aria-label="Pilih tema warna"
+          role="radiogroup"
+          aria-labelledby="settings-theme-heading"
           className="mt-3 grid grid-cols-3 gap-2"
         >
-          {(
-            [
-              { id: 'system', label: 'Sistem' },
-              { id: 'light', label: 'Terang' },
-              { id: 'dark', label: 'Gelap' },
-            ] as const
-          ).map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={live.settings.theme === item.id}
-              onClick={() => void handleThemeSelect(item.id)}
-              className={`min-h-[44px] rounded-[16px] border text-[13px] font-extrabold transition-colors ${
-                live.settings.theme === item.id
-                  ? 'border-[var(--primary)] bg-[var(--primary-tint)] text-[var(--primary)]'
-                  : 'border-[var(--border-control)] bg-[var(--bg)] text-[var(--ink)]'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+          {THEME_OPTIONS.map((item, idx) => {
+            const isChecked = currentTheme === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={isChecked}
+                onClick={() => void handleThemeSelect(item.id)}
+                onKeyDown={(e) => handleThemeKeyDown(e, idx)}
+                style={
+                  isChecked
+                    ? {
+                        backgroundColor: 'var(--primary)',
+                        color: 'var(--on-primary)',
+                        borderColor: 'var(--primary)',
+                      }
+                    : undefined
+                }
+                className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-[16px] border px-2 text-[13px] font-extrabold transition-colors ${
+                  isChecked
+                    ? 'shadow-sm'
+                    : 'border-[var(--border-control)] bg-[var(--bg)] text-[var(--ink)] hover:bg-[var(--border-soft)]'
+                }`}
+              >
+                {isChecked && (
+                  <Check size={15} strokeWidth={2.6} aria-hidden="true" />
+                )}
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

@@ -3,17 +3,20 @@ import type { ThemePreference } from '../domain/types';
 
 export const THEME_STORAGE_KEY = 'tanggal-tua-theme';
 
-export function applyThemeToDocument(theme: ThemePreference): void {
-  if (typeof document === 'undefined') return;
-
-  try {
-    if (theme === 'system') {
-      localStorage.removeItem(THEME_STORAGE_KEY);
-    } else {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
+export function normalizeThemePreference(value: unknown): ThemePreference {
+  if (typeof value === 'string') {
+    const lower = value.trim().toLowerCase();
+    if (lower === 'light' || lower === 'dark' || lower === 'system') {
+      return lower;
     }
-  } catch {
-    // Ignore storage block in strict private mode
+  }
+  return 'system';
+}
+
+export function resolveEffectiveTheme(theme: ThemePreference): 'light' | 'dark' {
+  const normalized = normalizeThemePreference(theme);
+  if (normalized === 'light' || normalized === 'dark') {
+    return normalized;
   }
 
   const prefersDark =
@@ -21,20 +24,43 @@ export function applyThemeToDocument(theme: ThemePreference): void {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  const resolved = theme === 'system' ? (prefersDark ? 'dark' : 'light') : theme;
+  return prefersDark ? 'dark' : 'light';
+}
+
+export function applyThemeToDocument(theme: ThemePreference): void {
+  if (typeof document === 'undefined') return;
+  const normalized = normalizeThemePreference(theme);
+
+  try {
+    if (normalized === 'system') {
+      localStorage.removeItem(THEME_STORAGE_KEY);
+    } else {
+      localStorage.setItem(THEME_STORAGE_KEY, normalized);
+    }
+  } catch {
+    // Ignore storage block in strict private mode
+  }
+
+  const resolved = resolveEffectiveTheme(normalized);
   document.documentElement.setAttribute('data-theme', resolved);
 
   const meta = document.querySelector('meta[name="color-scheme"]');
   if (meta) {
-    meta.setAttribute('content', theme === 'system' ? 'light dark' : theme);
+    meta.setAttribute('content', normalized === 'system' ? 'light dark' : normalized);
   }
 }
 
 export function useTheme(theme: ThemePreference): void {
-  useEffect(() => {
-    applyThemeToDocument(theme);
+  const normalized = normalizeThemePreference(theme);
 
-    if (theme !== 'system' || typeof window === 'undefined' || !window.matchMedia) {
+  useEffect(() => {
+    applyThemeToDocument(normalized);
+
+    if (
+      normalized !== 'system' ||
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
       return;
     }
 
@@ -45,5 +71,5 @@ export function useTheme(theme: ThemePreference): void {
     return () => {
       mediaQuery.removeEventListener('change', handleChange);
     };
-  }, [theme]);
+  }, [normalized]);
 }

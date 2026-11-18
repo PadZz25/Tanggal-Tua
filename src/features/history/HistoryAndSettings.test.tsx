@@ -98,4 +98,66 @@ describe('History & Settings pages (Milestone M5)', () => {
       expect(txs[0].note).toBe('Koreksi saldo');
     });
   });
+
+  it('synchronizes theme radiogroup aria-checked indicator with settings.theme across Gelap, Sistem, and reload (Bug A)', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/pengaturan');
+    const { unmount } = render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Pengaturan' })).toBeInTheDocument();
+    });
+
+    const radioTerang = screen.getByRole('radio', { name: 'Terang' });
+    const radioGelap = screen.getByRole('radio', { name: 'Gelap' });
+    const radioSistem = screen.getByRole('radio', { name: 'Sistem' });
+
+    // Initial state from beforeEach is 'light'
+    expect(radioTerang).toHaveAttribute('aria-checked', 'true');
+    expect(radioGelap).toHaveAttribute('aria-checked', 'false');
+    expect(radioSistem).toHaveAttribute('aria-checked', 'false');
+
+    // Click Gelap -> Gelap aria-checked=true, Terang false, dataset.theme === 'dark'
+    await user.click(radioGelap);
+    await waitFor(() => {
+      expect(radioGelap).toHaveAttribute('aria-checked', 'true');
+      expect(radioTerang).toHaveAttribute('aria-checked', 'false');
+      expect(radioSistem).toHaveAttribute('aria-checked', 'false');
+      expect(document.documentElement.dataset.theme).toBe('dark');
+    });
+
+    // Simulate reload (unmount and mount fresh App reading from Dexie)
+    unmount();
+    window.history.pushState({}, '', '/pengaturan');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Gelap' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+      expect(screen.getByRole('radio', { name: 'Terang' })).toHaveAttribute(
+        'aria-checked',
+        'false'
+      );
+      expect(document.documentElement.dataset.theme).toBe('dark');
+    });
+
+    // Switch to Sistem -> Sistem is marked aria-checked=true (not its resolved light/dark value)
+    await user.click(screen.getByRole('radio', { name: 'Sistem' }));
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Sistem' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+      expect(screen.getByRole('radio', { name: 'Gelap' })).toHaveAttribute(
+        'aria-checked',
+        'false'
+      );
+      expect(screen.getByRole('radio', { name: 'Terang' })).toHaveAttribute(
+        'aria-checked',
+        'false'
+      );
+    });
+  });
 });

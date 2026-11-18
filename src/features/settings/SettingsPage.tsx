@@ -674,7 +674,7 @@ export function SettingsPage({ live }: SettingsPageProps) {
             id="settings-about-heading"
             className="text-[14px] font-extrabold text-[var(--ink)]"
           >
-            {UI_STRINGS.appName} · Versi 1.0.0
+            {UI_STRINGS.appName} · Versi {__APP_VERSION__}
           </h2>
           <p className="text-[12px] font-medium text-[var(--muted)]">
             {UI_STRINGS.privacySummary} Tanpa server, tanpa akun, dan berfungsi penuh offline.

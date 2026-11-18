@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InstallPwaButton } from '../components/ui/InstallPwaButton';
+import { PwaUpdateBanner } from '../components/ui/PwaUpdateBanner';
 import { initPwaSupport } from './pwa';
 
 describe('PWA install prompt & button (Android 16 support)', () => {
@@ -59,5 +60,27 @@ describe('PWA install prompt & button (Android 16 support)', () => {
         screen.queryByRole('button', { name: /Instal aplikasi Tanggal Tua/i })
       ).not.toBeInTheDocument();
     });
+  });
+
+  it('displays "Versi baru tersedia · Muat ulang" toast when a new service worker version is waiting and reloads on click', async () => {
+    const user = userEvent.setup();
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, reload: reloadSpy },
+    });
+
+    render(<PwaUpdateBanner />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('tanggal-tua-sw-update-waiting'));
+    });
+
+    expect(
+      await screen.findByText('Versi baru tersedia · Muat ulang')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Muat ulang' }));
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 });

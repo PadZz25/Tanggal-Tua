@@ -41,3 +41,10 @@ Dokumen ini mencatat keputusan arsitektur, desain, dan penyempurnaan spesifikasi
   2. Konfigurasi Workbox sebelumnya mencampur `registerType: 'prompt'` dengan `clientsClaim: true` tanpa `skipWaiting: false` yang eksplisit, serta `dev-sw.js` melakukan `skipWaiting()` tanpa pesan konfirmasi pengguna, sehingga saat refresh di rute pecahan (`React.lazy` seperti `/pengaturan`), siklus hidup Service Worker dan bootstrap DB dapat berbenturan tanpa *ErrorBoundary* atau batas waktu (*timeout*).
   3. `updateSettings` sebelumnya menimpa seluruh baris `db.settings.put(...)` alih-alih melakukan pembaruan parsial `db.settings.update('main', patch)` dan penggabungan default `{ ...DEFAULTS, ...row }` saat pembacaan.
   - **Solusi:** Menambahkan penanganan `db.on('versionchange')` (menutup koneksi lama) dan `db.on('blocked')`, pembaruan parsial `db.settings.update`, fungsi `mergeWithDefaultSettings`, batas waktu bootstrap 5 detik, `AppErrorBoundary` di root, serta layar pemulihan `"Gagal memuat"` dengan tombol `"Muat ulang"` dan `"Reset cache aplikasi"` (menghapus Service Worker & Cache Storage tanpa menyentuh data IndexedDB pengguna).
+
+## 2026-11-18: Kebijakan Versi SemVer 0.2.0 (Tugas 4)
+
+- **Tanggal:** 2026-11-18
+- **Keputusan:** Menetapkan versi aplikasi pada `0.2.0` di `package.json` (mencadangkan `1.0.0` untuk rilis final MVP setelah seluruh tahapan selesai).
+- **Alasan Pemilihan MINOR (`0.1.0` → `0.2.0`):** Mengikuti aturan SemVer `0.x`, pembaruan ini memuat peningkatan fitur fungsional baru pada domain parser (perluasan kosakata pemasukan kuat/lemah dan aturan prioritas 5 tingkat pada Tugas 1) sekaligus perbaikan Bug A dan Bug B, sehingga dinaikkan pada tingkat MINOR menjadi `0.2.0`.
+- **Sumber Tunggal Versi:** `package.json` menjadi satu-satunya sumber kebenaran versi yang disuntikkan saat kompilasi melalui konfigurasi Vite `define: { __APP_VERSION__: JSON.stringify(pkg.version) }` dan ditampilkan secara dinamis pada bagian Pengaturan → Tentang.

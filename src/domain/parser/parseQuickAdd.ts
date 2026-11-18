@@ -2,7 +2,11 @@ import { addDays } from '../dates';
 import { MAX_AMOUNT, MIN_AMOUNT } from '../money';
 import { PARSER_HINTS } from '../copy';
 import type { Category, ParseResult } from '../types';
-import { EXPENSE_DISAMBIGUATION_WORDS, INCOME_TRIGGER_KEYWORDS } from './keywords';
+import {
+  EXPENSE_MARKERS,
+  STRONG_INCOME_KEYWORDS,
+  WEAK_INCOME_KEYWORDS,
+} from './keywords';
 
 interface AmountCandidate {
   start: number;
@@ -15,24 +19,32 @@ function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function hasWholePhrase(haystackLower: string, phraseLower: string): boolean {
-  const pattern = new RegExp(`(?:^|\\s)${escapeRegex(phraseLower)}(?=\\s|$)`, 'i');
-  return pattern.test(haystackLower);
+export function normalizeForMatching(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s.,]+/gu, ' ')
+    .replace(/(?<!\d)[.,]|[.,](?!\d)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-function findPhraseIndex(haystackLower: string, phraseLower: string): number {
+function hasWholePhrase(normalizedHaystack: string, phraseLower: string): boolean {
+  const pattern = new RegExp(`(?:^|\\s)${escapeRegex(phraseLower)}(?=\\s|$)`, 'i');
+  return pattern.test(normalizedHaystack);
+}
+
+function findPhraseIndex(normalizedHaystack: string, phraseLower: string): number {
   const pattern = new RegExp(`(?:^|\\s)(${escapeRegex(phraseLower)})(?=\\s|$)`, 'i');
-  const match = pattern.exec(haystackLower);
+  const match = pattern.exec(normalizedHaystack);
   if (!match) return -1;
   return match.index + (match[0].length - match[1].length);
 }
 
+const DIRECTION_TO_PERSON_REGEX =
+  /(?:^|\s)(?:(?:transfer|tf|kirim|kiriman|uang|dana|bayar|kasih|traktir)\s+ke\s+\p{L}+|ke\s+(?:ortu|orang\s+tua|teman|temen|kawan|adik|adek|kakak|abang|ibu|bapak|mama|papa|ayah|bunda|pacar|doi))(?=\s|$)/iu;
+
 function extractAmountCandidates(input: string): AmountCandidate[] {
   const candidates: AmountCandidate[] = [];
-  // Matches:
-  // 1) Optional '+', optional 'rp', number + unit (rb, ribu, k, jt, juta)
-  // 2) Optional '+', mandatory 'rp' + number (with optional thousand dots)
-  // 3) Optional '+', plain number (with or without thousand dots)
   const tokenRegex =
     /(?:^|\s)(\+)?(?:(rp)\s*(\d+(?:\.\d{3})+|\d+(?:[.,]\d+)?)\s*(rb|ribu|k|jt|juta)?|(\d+(?:[.,]\d+)?)\s*(rb|ribu|k|jt|juta)|(\d+(?:\.\d{3})+|\d+))(?=\s|$)/gi;
 
@@ -44,7 +56,6 @@ function extractAmountCandidates(input: string): AmountCandidate[] {
     const hasPlusPrefix = match[1] === '+';
 
     if (match[2]) {
-      // Branch 1: Starts with "rp"
       const rawNum = match[3];
       const unit = match[4]?.toLowerCase();
       if (unit) {
@@ -70,7 +81,6 @@ function extractAmountCandidates(input: string): AmountCandidate[] {
     }
 
     if (match[5] && match[6]) {
-      // Branch 2: Number + unit (rb, ribu, k, jt, juta)
       const rawNum = match[5].replace(',', '.');
       const unit = match[6].toLowerCase();
       const numeric = parseFloat(rawNum);
@@ -85,11 +95,9 @@ function extractAmountCandidates(input: string): AmountCandidate[] {
     }
 
     if (match[7]) {
-      // Branch 3: Plain number without unit or 'rp'
       const rawPlain = match[7];
       const digitsOnly = rawPlain.replace(/\./g, '');
       const numeric = parseInt(digitsOnly, 10);
-      // Plain numbers < 1000 without unit are ignored as portion/quantity (e.g. "bakso 2 porsi 20rb")
       if (!Number.isNaN(numeric) && numeric >= 1_000) {
         candidates.push({
           start: tokenStart,
@@ -104,36 +112,44 @@ function extractAmountCandidates(input: string): AmountCandidate[] {
   return candidates;
 }
 
-function detectTransactionType(
+export function detectTransactionType(
   textWithoutAmount: string,
   hasPlusPrefix: boolean
 ): 'expense' | 'income' {
+  // 1. Nominal berawalan "+" -> income
   if (hasPlusPrefix) return 'income';
 
-  const normalized = textWithoutAmount.toLowerCase().replace(/\s+/g, ' ').trim();
+  const normalized = normalizeForMatching(textWithoutAmount);
   if (!normalized) return 'expense';
 
-  const hasExpenseDisambiguator = EXPENSE_DISAMBIGUATION_WORDS.some((word) =>
-    hasWholePhrase(normalized, word)
-  );
-
-  for (const kw of INCOME_TRIGGER_KEYWORDS) {
-    if (hasWholePhrase(normalized, kw)) {
-      if ((kw === 'masuk' || kw === 'kiriman') && hasExpenseDisambiguator) {
-        continue;
-      }
-      return 'income';
-    }
+  // 2. Ada penanda pengeluaran atau pola arah "ke <orang>" -> expense
+  if (
+    EXPENSE_MARKERS.some((marker) => hasWholePhrase(normalized, marker)) ||
+    DIRECTION_TO_PERSON_REGEX.test(normalized)
+  ) {
+    return 'expense';
   }
 
+  // 3. Ada kata kunci pemasukan KUAT -> income
+  if (STRONG_INCOME_KEYWORDS.some((kw) => hasWholePhrase(normalized, kw))) {
+    return 'income';
+  }
+
+  // 4. Ada kata kunci pemasukan LEMAH -> income
+  if (WEAK_INCOME_KEYWORDS.some((kw) => hasWholePhrase(normalized, kw))) {
+    return 'income';
+  }
+
+  // 5. Selain itu -> expense
   return 'expense';
 }
 
 function matchCategory(
-  noteLower: string,
+  rawText: string,
   type: 'expense' | 'income',
   categories: Category[]
 ): string {
+  const normalized = normalizeForMatching(rawText);
   const relevantCategories = categories.filter((c) => c.kind === type);
 
   let bestCategoryId: string | null = null;
@@ -142,16 +158,16 @@ function matchCategory(
 
   for (const cat of relevantCategories) {
     for (const kw of cat.keywords) {
-      const kwLower = kw.toLowerCase().trim();
-      if (!kwLower) continue;
-      const idx = findPhraseIndex(noteLower, kwLower);
+      const kwNormalized = normalizeForMatching(kw);
+      if (!kwNormalized) continue;
+      const idx = findPhraseIndex(normalized, kwNormalized);
       if (idx !== -1) {
         if (
           idx < earliestIndex ||
-          (idx === earliestIndex && kwLower.length > longestKeywordLen)
+          (idx === earliestIndex && kwNormalized.length > longestKeywordLen)
         ) {
           earliestIndex = idx;
-          longestKeywordLen = kwLower.length;
+          longestKeywordLen = kwNormalized.length;
           bestCategoryId = cat.id;
         }
       }
@@ -244,7 +260,6 @@ export function parseQuickAdd(
     };
   }
 
-  // Strip stray leading '+' if present separately
   let hasStandalonePlus = false;
   if (remainingText.startsWith('+')) {
     hasStandalonePlus = true;
@@ -258,7 +273,7 @@ export function parseQuickAdd(
 
   const defaultNote = txType === 'income' ? 'Pemasukan' : 'Pengeluaran';
   const cleanedNote = remainingText ? capitalizeFirst(remainingText) : defaultNote;
-  const categoryId = matchCategory(remainingText.toLowerCase(), txType, ctx.categories);
+  const categoryId = matchCategory(remainingText, txType, ctx.categories);
 
   return {
     ok: true,

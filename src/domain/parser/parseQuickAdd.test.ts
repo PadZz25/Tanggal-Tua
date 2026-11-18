@@ -13,7 +13,7 @@ function catIdByName(name: string, kind: 'expense' | 'income' = 'expense'): stri
   return found.id;
 }
 
-describe('parseQuickAdd domain contract (Table 6.5 & edge cases)', () => {
+describe('parseQuickAdd domain contract (Table 6.5 & expanded income priority)', () => {
   const ctx = { today: TODAY, categories: DEFAULT_CATEGORIES };
 
   it('1. "kopi 18rb" -> expense, 18000, "Kopi", Jajan', () => {
@@ -214,24 +214,6 @@ describe('parseQuickAdd domain contract (Table 6.5 & edge cases)', () => {
     }
   });
 
-  it('disambiguates "masuk tol 15rb" and "tiket masuk 25rb" as expense, not income', () => {
-    const tolRes = parseQuickAdd('masuk tol 15rb', ctx);
-    expect(tolRes).toEqual({
-      ok: true,
-      type: 'expense',
-      amount: 15_000,
-      note: 'Masuk tol',
-      categoryId: catIdByName('Transport'),
-      date: TODAY,
-    });
-
-    const tiketRes = parseQuickAdd('tiket masuk 25rb', ctx);
-    expect(tiketRes.ok).toBe(true);
-    if (tiketRes.ok) {
-      expect(tiketRes.type).toBe('expense');
-    }
-  });
-
   it('rejects backdated "kemarin" transaction when date < openingDate', () => {
     const res = parseQuickAdd('kopi 18rb kemarin', {
       ...ctx,
@@ -249,6 +231,143 @@ describe('parseQuickAdd domain contract (Table 6.5 & edge cases)', () => {
       ok: false,
       error: 'OUT_OF_RANGE',
       hint: 'Nominalnya di luar batas wajar',
+    });
+  });
+
+  describe('Expanded income & expense priority rules (Tugas 1)', () => {
+    it('"gajian 3jt" -> income 3000000, Gaji/Freelance', () => {
+      expect(parseQuickAdd('gajian 3jt', ctx)).toEqual({
+        ok: true,
+        type: 'income',
+        amount: 3_000_000,
+        note: 'Gajian',
+        categoryId: catIdByName('Gaji/Freelance', 'income'),
+        date: TODAY,
+      });
+    });
+
+    it('"THR 500rb" -> income, Lainnya', () => {
+      expect(parseQuickAdd('THR 500rb', ctx)).toEqual({
+        ok: true,
+        type: 'income',
+        amount: 500_000,
+        note: 'THR',
+        categoryId: catIdByName('Lainnya', 'income'),
+        date: TODAY,
+      });
+    });
+
+    it('"transfer dari ortu 1jt" -> income, Kiriman ortu', () => {
+      expect(parseQuickAdd('transfer dari ortu 1jt', ctx)).toEqual({
+        ok: true,
+        type: 'income',
+        amount: 1_000_000,
+        note: 'Transfer dari ortu',
+        categoryId: catIdByName('Kiriman ortu', 'income'),
+        date: TODAY,
+      });
+    });
+
+    it('"dikirimin ortu 500rb" -> income, Kiriman ortu', () => {
+      expect(parseQuickAdd('dikirimin ortu 500rb', ctx)).toEqual({
+        ok: true,
+        type: 'income',
+        amount: 500_000,
+        note: 'Dikirimin ortu',
+        categoryId: catIdByName('Kiriman ortu', 'income'),
+        date: TODAY,
+      });
+    });
+
+    it('"dapet honor 250rb" -> income, Gaji/Freelance', () => {
+      expect(parseQuickAdd('dapet honor 250rb', ctx)).toEqual({
+        ok: true,
+        type: 'income',
+        amount: 250_000,
+        note: 'Dapet honor',
+        categoryId: catIdByName('Gaji/Freelance', 'income'),
+        date: TODAY,
+      });
+    });
+
+    it('"uang masuk 200rb" -> income', () => {
+      const res = parseQuickAdd('uang masuk 200rb', ctx);
+      expect(res).toEqual({
+        ok: true,
+        type: 'income',
+        amount: 200_000,
+        note: 'Uang masuk',
+        categoryId: catIdByName('Lainnya', 'income'),
+        date: TODAY,
+      });
+    });
+
+    it('"cashback 15rb" -> income', () => {
+      const res = parseQuickAdd('cashback 15rb', ctx);
+      expect(res).toEqual({
+        ok: true,
+        type: 'income',
+        amount: 15_000,
+        note: 'Cashback',
+        categoryId: catIdByName('Lainnya', 'income'),
+        date: TODAY,
+      });
+    });
+
+    it('"transfer ke ortu 100rb" -> expense', () => {
+      const res = parseQuickAdd('transfer ke ortu 100rb', ctx);
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.type).toBe('expense');
+        expect(res.amount).toBe(100_000);
+      }
+    });
+
+    it('"kirim ke teman 50rb" -> expense', () => {
+      const res = parseQuickAdd('kirim ke teman 50rb', ctx);
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.type).toBe('expense');
+        expect(res.amount).toBe(50_000);
+      }
+    });
+
+    it('"tiket masuk 25rb" -> expense (regresi)', () => {
+      const res = parseQuickAdd('tiket masuk 25rb', ctx);
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.type).toBe('expense');
+        expect(res.amount).toBe(25_000);
+      }
+    });
+
+    it('"beli hadiah 80rb" -> expense', () => {
+      const res = parseQuickAdd('beli hadiah 80rb', ctx);
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.type).toBe('expense');
+        expect(res.amount).toBe(80_000);
+      }
+    });
+
+    it('"dapat diskon makan 20rb" -> expense, Makan', () => {
+      expect(parseQuickAdd('dapat diskon makan 20rb', ctx)).toEqual({
+        ok: true,
+        type: 'expense',
+        amount: 20_000,
+        note: 'Dapat diskon makan',
+        categoryId: catIdByName('Makan', 'expense'),
+        date: TODAY,
+      });
+    });
+
+    it('"+75rb jual buku" -> income', () => {
+      const res = parseQuickAdd('+75rb jual buku', ctx);
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.type).toBe('income');
+        expect(res.amount).toBe(75_000);
+      }
     });
   });
 });

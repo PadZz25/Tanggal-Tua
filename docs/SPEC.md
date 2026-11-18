@@ -203,7 +203,12 @@ Angka polos **< 1000 tanpa satuan** diabaikan (dianggap jumlah/porsi: "bakso 2 p
 - Nominal 0 atau di luar batas → `INVALID_AMOUNT` / `OUT_OF_RANGE`.
 
 ### 6.2 Jenis (expense/income)
-Default `expense`. Menjadi `income` bila ada awalan `+` pada nominal, atau salah satu kata kunci: `kiriman`, `transfer ortu`, `gaji`, `freelance`, `beasiswa`, `uang saku`, `dapat`, `terima`, `masuk`.
+Urutan prioritas penentuan jenis (pencocokan per token/frasa utuh setelah normalisasi huruf kecil dan pembuangan tanda baca kecuali pemisah angka):
+1. Nominal berawalan `+` → `income`.
+2. Ada penanda pengeluaran → `expense`. Penanda: `beli`, `bayar`, `tiket`, `traktir`, `donasi`, `diskon`, `promo`, `voucher`, `potongan`, dan pola arah `ke <orang>` (`transfer ke ortu`, `kirim ke teman`).
+3. Ada kata kunci pemasukan KUAT → `income`: `gaji`, `gajian`, `kiriman`, `uang saku`, `beasiswa`, `freelance`, `honor`, `upah`, `bonus`, `thr`, `angpao`, `angpau`, `hadiah`, `komisi`, `bayaran`, `penghasilan`, `pendapatan`, `pemasukan`, `cashback`, `refund`, `ngelesin`, `transfer masuk`, `uang masuk`, `dana masuk`, `transfer dari`, `dari ortu`, `dikirimin`, `dikirim ortu`.
+4. Ada kata kunci pemasukan LEMAH → `income`: `dapat`, `dapet`, `terima`, `diterima`, `nerima`, `dikasih`.
+5. Selain itu → `expense`.
 
 ### 6.3 Tanggal
 Default `today`. Kata `kemarin` → `today − 1`. Kata lain tidak ditangani di MVP. Kata penanggalan dibuang dari catatan.
@@ -333,8 +338,8 @@ Kopi 12.000 (Jajan), Parkir 2.000 (Transport), Makan 15.000 (Makan). Chip di Ber
 | Kuliah | fotokopi, print, buku, ukt, spp, modul |
 | Belanja | belanja, indomaret, alfamart, skincare, baju |
 | Hiburan | nonton, bioskop, game, spotify, netflix, nongkrong |
-| Kiriman ortu | kiriman, transfer ortu, uang saku |
-| Gaji/Freelance | gaji, freelance |
+| Kiriman ortu | kiriman, uang saku, dari ortu, dikirimin, dikirim ortu |
+| Gaji/Freelance | gaji, gajian, freelance, honor, upah, komisi, bayaran, penghasilan, pendapatan, ngelesin |
 | Beasiswa | beasiswa |
 
 ### 7.4 Format export JSON

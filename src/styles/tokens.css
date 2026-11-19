@@ -40,6 +40,17 @@
   --tone-lainnya-bg: #ECE6DC;
   --tone-lainnya-ink: #5B5146;
 
+  /* Chart category tokens: >= 3:1 vs --surface (#FFFFFF), alternating luminance across neighbors */
+  --chart-1: #2B3A8C;
+  --chart-2: #B4690E;
+  --chart-3: #1D5C3A;
+  --chart-4: #C24E32;
+  --chart-5: #52328C;
+  --chart-6: #0F7A8A;
+  --chart-7: #7E263D;
+  --chart-8: #6E7216;
+  --chart-9: #4A4540;
+
   &:has(> head > meta[name="color-scheme"][content="dark"]) {
     color-scheme: dark;
   }
@@ -89,4 +100,15 @@
   --tone-hiburan-ink: #F7A8D0;
   --tone-lainnya-bg: #2E2923;
   --tone-lainnya-ink: #D4C8B8;
+
+  /* Chart category tokens: >= 3:1 vs --surface (#1E1A16), alternating luminance across neighbors */
+  --chart-1: #A9B4FF;
+  --chart-2: #D98E2B;
+  --chart-3: #7CE0A3;
+  --chart-4: #E07052;
+  --chart-5: #CEB5FF;
+  --chart-6: #4AB2C4;
+  --chart-7: #FFA3BA;
+  --chart-8: #A69B2E;
+  --chart-9: #CBC0B2;
 }

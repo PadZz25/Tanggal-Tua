@@ -12,6 +12,7 @@ import { useHomeState } from '../hooks/useHomeState';
 import { useTheme } from '../hooks/useTheme';
 
 const HistoryPage = lazy(() => import('../features/history/HistoryPage'));
+const SummaryPage = lazy(() => import('../features/summary/SummaryPage'));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage'));
 
 export const APP_NAME = UI_STRINGS.appName;
@@ -67,6 +68,7 @@ export function AppRoutes() {
         <Routes>
           <Route path="/" element={<HomePage live={live} />} />
           <Route path="/riwayat" element={<HistoryPage live={live} />} />
+          <Route path="/ringkasan" element={<SummaryPage live={live} />} />
           <Route path="/pengaturan" element={<SettingsPage live={live} />} />
           <Route path="/onboarding" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -148,4 +148,42 @@ describe('Design tokens WCAG 2.2 AA contrast verification', () => {
     expect(contrastRatio('#F2B33D', '#2B3A8C')).toBeGreaterThanOrEqual(3.0);
     expect(contrastRatio('#F2B33D', '#9E3F27')).toBeGreaterThanOrEqual(3.0);
   });
+
+  it('meets WCAG 1.4.11 >= 3:1 contrast against --surface and alternates luminance for all 9 chart tokens in light and dark themes', () => {
+    const lightCharts = [
+      '#2B3A8C',
+      '#B4690E',
+      '#1D5C3A',
+      '#C24E32',
+      '#52328C',
+      '#0F7A8A',
+      '#7E263D',
+      '#6E7216',
+      '#4A4540',
+    ];
+    const darkCharts = [
+      '#A9B4FF',
+      '#D98E2B',
+      '#7CE0A3',
+      '#E07052',
+      '#CEB5FF',
+      '#4AB2C4',
+      '#FFA3BA',
+      '#A69B2E',
+      '#CBC0B2',
+    ];
+
+    for (let i = 0; i < lightCharts.length; i++) {
+      expect(contrastRatio(lightCharts[i], '#FFFFFF')).toBeGreaterThanOrEqual(3.0);
+      expect(contrastRatio(darkCharts[i], '#1E1A16')).toBeGreaterThanOrEqual(3.0);
+      if (i > 0) {
+        expect(
+          Math.abs(relativeLuminance(lightCharts[i]) - relativeLuminance(lightCharts[i - 1]))
+        ).toBeGreaterThanOrEqual(0.08);
+        expect(
+          Math.abs(relativeLuminance(darkCharts[i]) - relativeLuminance(darkCharts[i - 1]))
+        ).toBeGreaterThanOrEqual(0.1);
+      }
+    }
+  });
 });

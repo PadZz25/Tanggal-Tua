@@ -1,9 +1,14 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { deleteTransaction } from '../../data/repositories/transactions';
 import { UI_STRINGS } from '../../domain/copy';
-import { formatHistoryDayHeader } from '../../domain/dates';
+import {
+  formatHistoryDayHeader,
+  formatShortDate,
+  parseDateParts,
+} from '../../domain/dates';
 import { formatShort } from '../../domain/money';
 import type { Transaction } from '../../domain/types';
 import type { AppLiveState } from '../../hooks/useHomeState';
@@ -17,22 +22,81 @@ interface HistoryPageProps {
 
 type FilterKind = 'all' | 'expense' | 'income';
 
+const DATE_QUERY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const EN_DASH = '\u2013';
+
+function formatRangeChipLabel(dari: string | null, sampai: string | null): string {
+  if (dari && sampai) {
+    const s = parseDateParts(dari);
+    const e = parseDateParts(sampai);
+    if (s.month === e.month && s.year === e.year) {
+      const endShort = formatShortDate(sampai);
+      const monthPart = endShort.split(' ')[1] ?? '';
+      return `${s.day}${EN_DASH}${e.day} ${monthPart}`;
+    }
+    return `${formatShortDate(dari)}${EN_DASH}${formatShortDate(sampai)}`;
+  }
+  if (dari) return `Dari ${formatShortDate(dari)}`;
+  if (sampai) return `Sampai ${formatShortDate(sampai)}`;
+  return '';
+}
+
 export function HistoryPage({ live }: HistoryPageProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<FilterKind>('all');
   const openTransactionSheet = useUIStore((s) => s.openTransactionSheet);
   const showToast = useUIStore((s) => s.showToast);
   const addPendingDelete = useUIStore((s) => s.addPendingDelete);
   const removePendingDelete = useUIStore((s) => s.removePendingDelete);
 
+  const kategoriParam = searchParams.get('kategori') || null;
+  const dariParam = searchParams.get('dari');
+  const sampaiParam = searchParams.get('sampai');
+  const validDari = dariParam && DATE_QUERY_REGEX.test(dariParam) ? dariParam : null;
+  const validSampai =
+    sampaiParam && DATE_QUERY_REGEX.test(sampaiParam) ? sampaiParam : null;
+
+  const hasQueryFilter = Boolean(kategoriParam || validDari || validSampai);
+
+  const chipLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (kategoriParam) {
+      parts.push(live.categoryMap.get(kategoriParam)?.name ?? 'Kategori');
+    }
+    const rangeText = formatRangeChipLabel(validDari, validSampai);
+    if (rangeText) {
+      parts.push(rangeText);
+    }
+    return parts.join(' · ');
+  }, [kategoriParam, validDari, validSampai, live.categoryMap]);
+
+  const clearQueryFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('kategori');
+    next.delete('dari');
+    next.delete('sampai');
+    setSearchParams(next);
+  };
+
   const filteredTransactions = useMemo(() => {
     return live.transactions.filter((tx) => {
+      if (kategoriParam && tx.categoryId !== kategoriParam) {
+        return false;
+      }
+      if (validDari && tx.date < validDari) {
+        return false;
+      }
+      if (validSampai && tx.date > validSampai) {
+        return false;
+      }
+
       if (filter === 'all') return true;
       if (filter === 'expense') {
         return tx.type === 'expense' || (tx.type === 'adjustment' && tx.amount < 0);
       }
       return tx.type === 'income' || (tx.type === 'adjustment' && tx.amount > 0);
     });
-  }, [live.transactions, filter]);
+  }, [live.transactions, filter, kategoriParam, validDari, validSampai]);
 
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, { items: Transaction[]; totalExpense: number }>();
@@ -110,6 +174,21 @@ export function HistoryPage({ live }: HistoryPageProps) {
             </button>
           ))}
         </div>
+
+        {hasQueryFilter && chipLabel && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="history-filter-chip"
+              onClick={clearQueryFilters}
+              aria-label={`Hapus filter ${chipLabel}`}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--primary)] bg-[var(--primary-tint)] px-3.5 text-[13px] font-extrabold text-[var(--primary)] hover:opacity-90"
+            >
+              <span>{chipLabel}</span>
+              <X size={15} strokeWidth={2.5} aria-hidden="true" />
+            </button>
+          </div>
+        )}
       </header>
 
       {groupedByDate.length === 0 ? (

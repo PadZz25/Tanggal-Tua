@@ -1,10 +1,11 @@
-import { Clock, Home, Settings } from 'lucide-react';
+import { Clock, Home, PieChart, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useUIStore } from '../../hooks/useUIStore';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Beranda', icon: Home },
   { to: '/riwayat', label: 'Riwayat', icon: Clock },
+  { to: '/ringkasan', label: 'Ringkasan', icon: PieChart },
   { to: '/pengaturan', label: 'Pengaturan', icon: Settings },
 ] as const;
 
@@ -19,14 +20,14 @@ export function BottomNav() {
       }`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="mx-auto flex h-16 max-w-[480px] items-center justify-around px-3">
+      <div className="mx-auto flex h-16 max-w-[480px] items-center justify-around px-2">
         {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex min-h-[48px] min-w-[76px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 text-[11px] transition-colors ${
+              `flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] transition-colors ${
                 isActive
                   ? 'font-extrabold text-[var(--primary)]'
                   : 'font-bold text-[var(--muted)] hover:text-[var(--ink)]'

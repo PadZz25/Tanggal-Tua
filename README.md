@@ -80,14 +80,17 @@ flowchart TD
 
 ## Batasan yang Diketahui
 
-- Pada versi MVP (P0), satu baris input catat cepat hanya menerima satu nominal transaksi (input seperti `es teh 4rb dan parkir 2rb` akan meminta pencatatan satu per satu; pemisahan otomatis masuk ke roadmap P1).
+- Satu baris input catat cepat saat ini hanya menerima satu nominal transaksi (input seperti `es teh 4rb dan parkir 2rb` akan meminta pencatatan satu per satu).
 - Karena data disimpan murni di browser perangkat lokal, penghapusan data situs pada pengaturan browser dapat menghapus catatan jika pengguna belum melakukan ekspor JSON/CSV.
 
-## Roadmap
+## Rencana ke depan
 
-- **P0 (MVP - Selesai):** Onboarding, Beranda 6 State, Parser Catat Cepat, Template Satu Ketuk, Form Transaksi Lengkap, Riwayat Harian, Pengaturan & Ekspor/Impor, PWA Offline.
-- **P1:** Catatan patungan dan utang teman, transaksi berulang otomatis, kategori kustom, pencarian riwayat, ringkasan bulanan, pemisahan multi-nominal dalam satu input.
-- **P2:** Input suara Bahasa Indonesia (`Web Speech API`) dan enkripsi cadangan lokal.
+- Pencatatan yang lebih cepat dan nyaman (input lebih pintar, termasuk suara).
+- Wawasan pengeluaran yang lebih jelas dan mudah dipahami.
+- Fitur berbagi pengeluaran dengan teman.
+- Perlindungan dan pencadangan data yang lebih baik.
+
+Daftar ide rinci yang sifatnya dapat berubah sewaktu-waktu tersedia di [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Lisensi
 

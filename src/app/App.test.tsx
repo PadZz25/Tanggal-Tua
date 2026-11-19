@@ -5,6 +5,7 @@ import { App, APP_NAME } from './App';
 
 describe('App router & onboarding guard', () => {
   beforeEach(async () => {
+    window.__TANGGAL_TUA_TODAY__ = '2026-11-18';
     await resetAllData('2026-11-18');
     window.history.pushState({}, '', '/');
   });

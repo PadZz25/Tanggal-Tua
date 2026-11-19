@@ -2,8 +2,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { App } from '../../app/App';
 import { Toast } from '../../components/ui/Toast';
-import { resetAllData } from '../../data/repositories/settings';
+import { completeOnboarding, resetAllData } from '../../data/repositories/settings';
 import { getAllTransactions } from '../../data/repositories/transactions';
 import { getHomeState } from '../../domain/allowance';
 import { DEFAULT_CATEGORIES } from '../../domain/parser/keywords';
@@ -11,8 +12,9 @@ import { useUIStore } from '../../hooks/useUIStore';
 import { HeroCard } from './HeroCard';
 import { QuickAddBar } from './QuickAddBar';
 
-describe('Home features & components (Milestone M3)', () => {
+describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
   beforeEach(async () => {
+    window.__TANGGAL_TUA_TODAY__ = '2026-11-18';
     await resetAllData('2026-11-18');
     useUIStore.setState({
       toast: null,
@@ -24,7 +26,7 @@ describe('Home features & components (Milestone M3)', () => {
     });
   });
 
-  it('renders HeroCard in normal, tanggal-tua, over, broke, and payday-needed states', () => {
+  it('renders HeroCard with "Sisa uang" total balance across normal, fresh, tanggal-tua, over, broke (negative), and payday-needed states', () => {
     const noop = vi.fn();
 
     // 1. Normal state
@@ -46,8 +48,30 @@ describe('Home features & components (Milestone M3)', () => {
     expect(screen.getByText('Jatah hari ini')).toBeInTheDocument();
     expect(screen.getByTestId('hero-allowance-amount')).toHaveTextContent('Rp 36rb');
     expect(screen.getByText(/dari jatah Rp 65rb/i)).toBeInTheDocument();
+    expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Sisa uang');
+    expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Rp 816.000');
+    expect(screen.getByText('Sisa uang 816 ribu rupiah')).toBeInTheDocument();
 
-    // 2. Tanggal Tua state
+    // 2. Fresh state
+    const freshState = getHomeState({
+      today: '2026-11-18',
+      nextPayday: '2026-12-01',
+      currentBalance: 845_000,
+      spentToday: 0,
+    });
+    rerender(
+      <HeroCard
+        today="2026-11-18"
+        nextPayday="2026-12-01"
+        homeState={freshState}
+        onConfigurePayday={noop}
+        onRecordIncome={noop}
+      />
+    );
+    expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Rp 845.000');
+    expect(screen.getByText('Sisa uang 845 ribu rupiah')).toBeInTheDocument();
+
+    // 3. Tanggal Tua state
     const tanggalTuaState = getHomeState({
       today: '2026-11-27',
       nextPayday: '2026-12-01',
@@ -65,8 +89,9 @@ describe('Home features & components (Milestone M3)', () => {
     );
     expect(screen.getByText('Mode Tanggal Tua')).toBeInTheDocument();
     expect(screen.getByText('1 Des · 4 hari lagi')).toBeInTheDocument();
+    expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Rp 166.000');
 
-    // 3. Over state
+    // 4. Over state
     const overState = getHomeState({
       today: '2026-11-27',
       nextPayday: '2026-12-01',
@@ -83,8 +108,9 @@ describe('Home features & components (Milestone M3)', () => {
       />
     );
     expect(screen.getByTestId('hero-allowance-amount')).toHaveTextContent('−Rp 8rb');
+    expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Rp 148.000');
 
-    // 4. Broke state
+    // 5. Broke state with negative balance (U+2212 minus)
     const brokeState = getHomeState({
       today: '2026-11-18',
       nextPayday: '2026-12-01',
@@ -101,8 +127,10 @@ describe('Home features & components (Milestone M3)', () => {
       />
     );
     expect(screen.getByRole('button', { name: 'Catat pemasukan' })).toBeInTheDocument();
+    expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('−Rp 20.000');
+    expect(screen.getByText('Sisa uang minus 20 ribu rupiah')).toBeInTheDocument();
 
-    // 5. Payday-needed state
+    // 6. Payday-needed state (consistent, no duplicate hero-total-balance row)
     const paydayNeededState = getHomeState({
       today: '2026-12-01',
       nextPayday: '2026-12-01',
@@ -121,6 +149,40 @@ describe('Home features & components (Milestone M3)', () => {
     expect(
       screen.getByRole('button', { name: 'Atur kiriman berikutnya' })
     ).toBeInTheDocument();
+    expect(screen.getByTestId('hero-balance-amount')).toHaveTextContent('Rp 350.000');
+    expect(screen.queryByTestId('hero-total-balance')).not.toBeInTheDocument();
+  });
+
+  it('updates "Sisa uang" in real time when adding and undoing a transaction on Beranda', async () => {
+    const user = userEvent.setup();
+    await completeOnboarding({
+      openingBalance: 845_000,
+      openingDate: '2026-11-18',
+      nextPayday: '2026-12-01',
+      paydayDay: 1,
+      theme: 'light',
+    });
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Rp 845.000');
+    });
+
+    const input = screen.getByPlaceholderText('Ketik: kopi 18rb');
+    await user.type(input, 'kopi 18rb');
+    await user.click(screen.getByRole('button', { name: 'Simpan catatan cepat' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Rp 827.000');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Batalkan' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Rp 845.000');
+    });
   });
 
   it('validates QuickAddBar input, saves transaction, and allows undo via Toast Batalkan', async () => {
@@ -142,12 +204,10 @@ describe('Home features & components (Milestone M3)', () => {
     const input = screen.getByPlaceholderText('Ketik: kopi 18rb');
     const submitBtn = screen.getByRole('button', { name: 'Simpan catatan cepat' });
 
-    // Submit without amount -> shows inline error hint
     await user.type(input, 'kopi');
     await user.click(submitBtn);
     expect(screen.getByRole('alert')).toHaveTextContent('Tambah nominal, mis. 10rb');
 
-    // Type valid quick add -> saves and shows toast with Batalkan
     await user.clear(input);
     await user.type(input, 'kopi 18rb');
     await user.click(submitBtn);
@@ -161,7 +221,6 @@ describe('Home features & components (Milestone M3)', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Tersimpan · Kopi −18rb');
 
-    // Click Batalkan -> deletes transaction
     const undoBtn = screen.getByRole('button', { name: 'Batalkan' });
     await user.click(undoBtn);
 

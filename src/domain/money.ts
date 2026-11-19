@@ -55,6 +55,23 @@ export function formatFull(amount: number): string {
   return isNegative ? `${MINUS_SIGN}${formatted}` : formatted;
 }
 
+export function formatSpokenRupiah(amount: number): string {
+  const isNegative = amount < 0;
+  const abs = Math.abs(Math.trunc(amount));
+  const prefix = isNegative ? 'minus ' : '';
+
+  if (abs >= 1_000_000 && abs % 1_000_000 === 0) {
+    return `${prefix}${abs / 1_000_000} juta rupiah`;
+  }
+
+  if (abs >= 1_000 && abs < 1_000_000 && abs % 1_000 === 0) {
+    return `${prefix}${abs / 1_000} ribu rupiah`;
+  }
+
+  const grouped = abs.toLocaleString('id-ID');
+  return `${prefix}${grouped} rupiah`;
+}
+
 export function parseNominalInput(raw: string): number | null {
   const cleaned = raw.trim().toLowerCase().replace(/^rp\s*/i, '').trim();
   if (!cleaned) return null;

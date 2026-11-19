@@ -54,6 +54,16 @@ describe('Design tokens WCAG 2.2 AA contrast verification', () => {
     ['Light coin-ink on coin badge', '#231C16', '#F2B33D'],
     ['Light white on warm hero', '#FFFFFF', '#9E3F27'],
     [
+      'Light hero-muted on primary',
+      blendRgbaOnHex([255, 255, 255], 0.85, '#2B3A8C'),
+      '#2B3A8C',
+    ],
+    [
+      'Light hero-muted on warm',
+      blendRgbaOnHex([255, 255, 255], 0.85, '#9E3F27'),
+      '#9E3F27',
+    ],
+    [
       'Light white on hero-chip over primary',
       '#FFFFFF',
       blendRgbaOnHex([255, 255, 255], 0.16, '#2B3A8C'),
@@ -92,6 +102,16 @@ describe('Design tokens WCAG 2.2 AA contrast verification', () => {
     ['Dark white on warm hero', '#FFFFFF', '#9E3F27'],
     ['Dark white on glass hero base', '#FFFFFF', darkHeroBase],
     ['Dark white on glass hero over decorative blob', '#FFFFFF', darkHeroOverBlob],
+    [
+      'Dark hero-muted on glass hero over decorative blob',
+      blendRgbaOnHex([255, 255, 255], 0.85, darkHeroOverBlob),
+      darkHeroOverBlob,
+    ],
+    [
+      'Dark hero-muted on warm hero',
+      blendRgbaOnHex([255, 255, 255], 0.85, '#9E3F27'),
+      '#9E3F27',
+    ],
     [
       'Dark white on hero-chip over glass hero + blob',
       '#FFFFFF',

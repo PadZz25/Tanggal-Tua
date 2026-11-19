@@ -3,7 +3,7 @@ import { Mascot } from '../../components/brand/Mascot';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { getMascotCopy, UI_STRINGS } from '../../domain/copy';
 import { formatShortDate } from '../../domain/dates';
-import { formatHeroShort } from '../../domain/money';
+import { formatFull, formatHeroShort, formatSpokenRupiah } from '../../domain/money';
 import type { HomeStateResult } from '../../domain/types';
 import { useUIStore } from '../../hooks/useUIStore';
 
@@ -115,7 +115,7 @@ export function HeroCard({
           backgroundColor: isWarmState ? 'var(--warm)' : 'var(--hero-bg)',
           color: 'var(--hero-ink)',
         }}
-        className={`relative rounded-[28px] p-5 transition-colors duration-300 ${
+        className={`relative rounded-[28px] p-[18px] transition-colors duration-300 ${
           !isWarmState
             ? '[[data-theme=dark]_&]:border [[data-theme=dark]_&]:border-[rgba(169,180,255,0.28)] [[data-theme=dark]_&]:backdrop-blur-[24px]'
             : ''
@@ -160,7 +160,9 @@ export function HeroCard({
             </span>
           ) : (
             <span className="text-[14px] font-semibold">
-              {state === 'payday-needed' ? 'Saldo saat ini' : UI_STRINGS.heroLabelNormal}
+              {state === 'payday-needed'
+                ? UI_STRINGS.remainingBalanceLabel
+                : UI_STRINGS.heroLabelNormal}
             </span>
           )}
 
@@ -175,18 +177,21 @@ export function HeroCard({
         </div>
 
         {state === 'payday-needed' ? (
-          <div className="mt-3">
+          <div className="mt-2.5">
             <p
               data-testid="hero-balance-amount"
-              className="tabular-nums text-[44px] font-extrabold leading-[1.1] tracking-[-1.5px]"
+              className="tabular-nums text-[40px] font-extrabold leading-[1.1] tracking-[-1.2px]"
             >
-              {formatHeroShort(currentBalance)}
+              <span className="visually-hidden">
+                {UI_STRINGS.remainingBalanceLabel} {formatSpokenRupiah(currentBalance)}
+              </span>
+              <span aria-hidden="true">{formatFull(currentBalance)}</span>
             </p>
             <p className="mt-1.5 text-[14px] font-medium opacity-95">
               Tanggal kiriman sudah tiba atau lewat. Atur tanggal berikutnya agar jatah harianmu
               terhitung lagi.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2.5">
+            <div className="mt-3.5 flex flex-wrap gap-2.5">
               <button
                 type="button"
                 onClick={onConfigurePayday}
@@ -209,20 +214,35 @@ export function HeroCard({
             </div>
           </div>
         ) : state === 'broke' ? (
-          <div className="mt-3">
+          <div className="mt-2.5">
             <p
               data-testid="hero-allowance-amount"
-              className="tabular-nums text-[56px] font-extrabold leading-[1.1] tracking-[-2px]"
+              className="tabular-nums text-[52px] font-extrabold leading-[1.08] tracking-[-2px]"
             >
               Rp 0
             </p>
-            <p className="mt-1 text-[14px] font-medium opacity-95">
-              Saldo saat ini {formatHeroShort(currentBalance)}
+            <p
+              data-testid="hero-total-balance"
+              className="mt-1 flex items-baseline gap-1.5"
+            >
+              <span className="visually-hidden">
+                {UI_STRINGS.remainingBalanceLabel} {formatSpokenRupiah(currentBalance)}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{ color: 'var(--hero-muted)' }}
+                className="text-[13px] font-bold"
+              >
+                {UI_STRINGS.remainingBalanceLabel}
+              </span>
+              <span aria-hidden="true" className="tabular-nums text-[14px] font-extrabold">
+                {formatFull(currentBalance)}
+              </span>
             </p>
-            <div className="mt-3.5">
+            <div className="mt-3">
               <ProgressBar usedRatio={1} />
             </div>
-            <div className="mt-4">
+            <div className="mt-3.5">
               <button
                 type="button"
                 onClick={onRecordIncome}
@@ -237,18 +257,36 @@ export function HeroCard({
             </div>
           </div>
         ) : (
-          <div className="mt-3">
+          <div className="mt-2.5">
             <p
               data-testid="hero-allowance-amount"
-              className="tabular-nums text-[56px] font-extrabold leading-[1.1] tracking-[-2px]"
+              className="tabular-nums text-[52px] font-extrabold leading-[1.08] tracking-[-2px]"
             >
               {formatHeroShort(animatedRemaining)}
             </p>
-            <p className="mt-1.5 text-[14px] font-medium opacity-95">
+            <p className="mt-1 text-[14px] font-medium opacity-95">
               dari jatah {formatHeroShort(dailyAllowance)} · terpakai{' '}
               {formatHeroShort(spentToday)}
             </p>
-            <div className="mt-3.5">
+            <p
+              data-testid="hero-total-balance"
+              className="mt-0.5 flex items-baseline gap-1.5"
+            >
+              <span className="visually-hidden">
+                {UI_STRINGS.remainingBalanceLabel} {formatSpokenRupiah(currentBalance)}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{ color: 'var(--hero-muted)' }}
+                className="text-[13px] font-bold"
+              >
+                {UI_STRINGS.remainingBalanceLabel}
+              </span>
+              <span aria-hidden="true" className="tabular-nums text-[14px] font-extrabold">
+                {formatFull(currentBalance)}
+              </span>
+            </p>
+            <div className="mt-3">
               <ProgressBar usedRatio={usedRatio} />
             </div>
           </div>
@@ -256,7 +294,7 @@ export function HeroCard({
 
         <div
           style={{ backgroundColor: 'var(--hero-chip)' }}
-          className="mt-4 flex items-center gap-3 rounded-[18px] p-3"
+          className="mt-3 flex items-center gap-3 rounded-[18px] p-2.5"
         >
           <Mascot mood={mood} size={40} />
           <p data-testid="mascot-message" className="text-[14px] font-semibold leading-snug">

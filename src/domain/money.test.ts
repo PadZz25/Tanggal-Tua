@@ -3,6 +3,7 @@ import {
   formatFull,
   formatHeroShort,
   formatShort,
+  formatSpokenRupiah,
   isValidAmount,
   MINUS_SIGN,
   parseNominalInput,
@@ -49,6 +50,16 @@ describe('money domain functions', () => {
       expect(formatFull(36000)).toBe('Rp 36.000');
       expect(formatFull(1500000)).toBe('Rp 1.500.000');
       expect(formatFull(-8000)).toBe(`${MINUS_SIGN}Rp 8.000`);
+    });
+  });
+
+  describe('formatSpokenRupiah', () => {
+    it('formats readable Indonesian spoken currency text for screen readers', () => {
+      expect(formatSpokenRupiah(845_000)).toBe('845 ribu rupiah');
+      expect(formatSpokenRupiah(-20_000)).toBe('minus 20 ribu rupiah');
+      expect(formatSpokenRupiah(2_000_000)).toBe('2 juta rupiah');
+      expect(formatSpokenRupiah(845_500)).toBe('845.500 rupiah');
+      expect(formatSpokenRupiah(0)).toBe('0 rupiah');
     });
   });
 

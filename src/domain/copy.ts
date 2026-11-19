@@ -57,6 +57,7 @@ export const UI_STRINGS = {
   appName: 'Tanggal Tua',
   tagline: 'Bertahan sampai kiriman berikutnya.',
   heroLabelNormal: 'Jatah hari ini',
+  remainingBalanceLabel: 'Sisa uang',
   heroBadgeTanggalTua: 'Mode Tanggal Tua',
   quickSectionLabel: 'Catat cepat',
   todaySectionTitle: 'Hari ini',

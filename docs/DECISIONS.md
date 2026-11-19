@@ -48,3 +48,17 @@ Dokumen ini mencatat keputusan arsitektur, desain, dan penyempurnaan spesifikasi
 - **Keputusan:** Menetapkan versi aplikasi pada `0.2.0` di `package.json` (mencadangkan `1.0.0` untuk rilis final MVP setelah seluruh tahapan selesai).
 - **Alasan Pemilihan MINOR (`0.1.0` → `0.2.0`):** Mengikuti aturan SemVer `0.x`, pembaruan ini memuat peningkatan fitur fungsional baru pada domain parser (perluasan kosakata pemasukan kuat/lemah dan aturan prioritas 5 tingkat pada Tugas 1) sekaligus perbaikan Bug A dan Bug B, sehingga dinaikkan pada tingkat MINOR menjadi `0.2.0`.
 - **Sumber Tunggal Versi:** `package.json` menjadi satu-satunya sumber kebenaran versi yang disuntikkan saat kompilasi melalui konfigurasi Vite `define: { __APP_VERSION__: JSON.stringify(pkg.version) }` dan ditampilkan secara dinamis pada bagian Pengaturan → Tentang.
+
+## 2026-11-19: Keputusan Rilis 0.3.0 (Sisa Uang, Ringkasan, dan Tipografi Hero)
+
+- **Tanggal:** 2026-11-19
+- **Keputusan 1 (Slot Navigasi Bawah ke-4 untuk Ringkasan):**
+  - Halaman Ringkasan (`/ringkasan`) menempati slot ke-4 di navigasi bawah (`Beranda`, `Riwayat`, `Ringkasan`, `Pengaturan`). Ketika fitur **Patungan (P1)** dibangun di rilis berikutnya, diperlukan keputusan tata letak navigasi baru (misalnya memindahkan salah satu menu sekunder ke header/tab) karena 5 item di navigasi bawah terlalu padat pada lebar layar 320px–390px.
+- **Keputusan 2 (Pengecualian Transaksi `adjustment` dari Ringkasan):**
+  - Transaksi bertipe `adjustment` (koreksi saldo) sengaja dikecualikan dari `summarize()` (`totalExpense`, `totalIncome`, `byCategory`, `dailyTotals`) agar angka ringkasan hanya mencerminkan arus pengeluaran dan pemasukan nyata, bukan selisih rekonsiliasi saldo.
+- **Keputusan 3 (Perbandingan Adil "Hari yang Sama"):**
+  - Saat periode masih berjalan (misalnya hari Rabu pada minggu ini), membandingkan pengeluaran 3 hari berjalan terhadap total 7 hari penuh minggu lalu akan selalu terlihat "turun" dan menyesatkan. Karena itu `comparePeriods()` membandingkan `k` hari pertama periode berjalan dengan `k` hari pertama periode sebelumnya (dijepit ke panjang periode sebelumnya bila lintas panjang bulan, seperti Maret vs Februari).
+- **Keputusan 4 (Verifikasi Empiris Celah Koma pada Angka Hero - Tugas 4):**
+  - Pengukuran langsung di Chromium pada build produksi (`Plus Jakarta Sans 800`, 52px) membuktikan dua penyebab sekaligus: (1) `font-variant-numeric: tabular-nums` memaksa angka sempit `"1"` melebar dari `19.50px` menjadi `29.22px` (+9.72px) pada `"Rp 1,5jt"`, dan (2) glyph koma `","` bawaan Plus Jakarta Sans 800 memiliki *advance width* `18.08px` dengan *sidebearing* lebar pada kedua mode. Solusi: angka hero menggunakan `font-variant-numeric: proportional-nums` dengan penyesuaian kerning pemisah desimal (`-mx-[0.06em]`), sementara `tabular-nums` tetap dipertahankan pada kolom nominal daftar transaksi, baris Sisa uang, dan legenda Ringkasan.
+- **Keputusan 5 (Tidak Menaikkan Versi Skema Dexie):**
+  - Seluruh data Ringkasan dan Sisa uang dihitung langsung dari transaksi dan pengaturan yang sudah ada di skema Dexie v1 tanpa menambah tabel atau mengubah skema database.

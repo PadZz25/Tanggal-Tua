@@ -3,6 +3,22 @@
 Seluruh perubahan penting pada proyek **Tanggal Tua** dicatat di dokumen ini.
 Format mengacu pada [Keep a Changelog](https://keepachangelog.com/id/1.1.0/), dan penomoran versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
+## [0.3.0] - 2026-11-19
+
+### Added
+- Halaman Ringkasan mingguan dan bulanan (`/ringkasan`, lazy-loaded) dengan navigasi periode `‹ ›` dan sinkronisasi URL.
+- Chart donut SVG pengeluaran per kategori dengan token warna `--chart-1` sampai `--chart-9` teruji kontras (terang & gelap) serta pembulatan persen *largest remainder* berjumlah tepat 100.
+- Chart batang pengeluaran per hari berbasis HTML/flex yang dapat difokus dan diketuk, lengkap dengan keterangan di bawah chart dan tabel `sr-only`.
+- Perbandingan adil terhadap periode sebelumnya (jumlah hari yang sama untuk periode berjalan) dengan bahasa netral tanpa warna merah/hijau menghakimi.
+- Dukungan filter kategori dan rentang tanggal (`?kategori=&dari=&sampai=`) di halaman Riwayat dengan chip filter yang bisa dihapus.
+- Baris total `"Sisa uang"` (`formatFull`) di kartu hero Beranda pada semua state.
+
+### Changed
+- Navigasi bawah diperluas menjadi 4 item: Beranda, Riwayat, Ringkasan, Pengaturan.
+
+### Fixed
+- Celah pada koma di angka hero (`Rp 65,4rb`, `Rp 1,5jt`) dengan beralih ke angka proporsional dan penyesuaian kerning pemisah desimal.
+
 ## [0.2.0] - 2026-11-18
 
 ### Added

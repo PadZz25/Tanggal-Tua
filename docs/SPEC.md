@@ -96,12 +96,13 @@ Bagian ini menjelaskan *mengapa* keputusan produk diambil, agar agent tidak "mem
 | F8 | Mode tanggal tua | Tampilan dan copy khusus saat jatah menipis (bagian 5.3). |
 | F9 | PWA offline | Bisa diinstal, berfungsi penuh offline, font di-host sendiri. |
 | F10 | Export/Import | JSON penuh (berversi) dan CSV transaksi. |
+| F11 | Ringkasan (0.3.0) | Ringkasan mingguan/bulanan, chart donut per kategori, chart batang harian, perbandingan adil periode lalu, serta filter kategori+rentang di Riwayat. |
 
 ### 4.2 P1 — setelah MVP stabil
 - **Patungan dan utang teman** (catat "Budi utang 35rb", tandai lunas, bagi tagihan rata).
 - Transaksi berulang (gaji, cicilan, langganan).
 - Kategori kustom (nama, ikon, warna).
-- Pencarian di riwayat; ringkasan bulanan (total keluar/masuk, rincian per kategori).
+- Pencarian di riwayat.
 - Streak mencatat yang ramah (tanpa hukuman).
 - Insight berbasis aturan yang bisa dijelaskan dengan angka ("Jajan minggu ini naik 20% dari minggu lalu: Rp 120rb vs Rp 100rb").
 - Pengingat backup (setiap 30 hari tanpa export).
@@ -385,6 +386,7 @@ tanggal-tua/
 │  │  ├─ money.ts             # formatShort, formatFull, parse helper
 │  │  ├─ dates.ts             # today(), daysBetween(), rollPayday(), formatShortDate()
 │  │  ├─ allowance.ts         # computeAllowance(), getHomeState()
+│  │  ├─ summary.ts           # getPeriodRange(), shiftPeriod(), summarize(), comparePeriods()
 │  │  ├─ parser/
 │  │  │  ├─ parseQuickAdd.ts
 │  │  │  ├─ keywords.ts
@@ -401,6 +403,7 @@ tanggal-tua/
 │  │  ├─ home/                # HeroCard, QuickChips, TodayList, QuickAddBar
 │  │  ├─ transactions/        # TransactionSheet (form), TransactionRow
 │  │  ├─ history/
+│  │  ├─ summary/             # SummaryPage, CategoryDonutChart, DailyExpenseChart, chartColors
 │  │  ├─ settings/
 │  │  └─ settle-up/           # P1: patungan & utang teman
 │  ├─ components/
@@ -442,12 +445,13 @@ tanggal-tua/
 |---|---|---|
 | `/onboarding` | Onboarding | Hanya jika `hasOnboarded == false`; selain itu redirect ke `/`. |
 | `/` | Beranda | |
-| `/riwayat` | Riwayat | |
-| `/patungan` | Patungan | P1. Item navigasi muncul hanya setelah fitur ini dibangun. |
+| `/riwayat` | Riwayat | Mendukung query `?kategori=<id>&dari=<start>&sampai=<end>`. |
+| `/ringkasan` | Ringkasan | Lazy-loaded; query `?periode=minggu|bulan&tanggal=YYYY-MM-DD`. |
+| `/patungan` | Patungan | P1. Perlu keputusan navigasi saat dibangun karena 4 slot bawah sudah penuh. |
 | `/pengaturan` | Pengaturan | |
 | (sheet) | Form transaksi | Bottom sheet, bukan rute terpisah (boleh query param `?edit=<id>` agar tombol back bekerja). |
 
-Navigasi bawah (4 item, tinggi 64px): **Beranda, Riwayat, Patungan (P1), Profil→Pengaturan**. Di MVP tampilkan 3 item (tanpa Patungan).
+Navigasi bawah (4 item, tinggi 64px): **Beranda, Riwayat, Ringkasan, Pengaturan**.
 
 ### 10.2 Onboarding (F1)
 Satu pertanyaan per layar, tombol utama besar, indikator langkah.
@@ -462,8 +466,9 @@ Urutan vertikal (lebar acuan 390px; padding horizontal 20px):
 1. **Header** (tinggi 64): koin maskot 32px + wordmark "Tanggal Tua" (800, 18px) di kiri; tombol ikon pengaturan 44×44 di kanan.
 2. **Hero card** (radius 28, padding 22; jarak atas 16):
    - Baris atas: label "Jatah hari ini" (14/600) di kiri; chip "Kiriman 1 Des · 13 hari lagi" (12/700, latar putih 16%) di kanan. Pada state `tanggal-tua`: label diganti badge kuning "Mode Tanggal Tua" dan chip jadi "1 Des · 4 hari lagi".
-   - Angka besar: sisa jatah, contoh "Rp 36rb" (56px, bobot 800, letter-spacing −2px, line-height 1.1).
+   - Angka besar: sisa jatah, contoh "Rp 36rb" (52–56px, bobot 800, letter-spacing −2px, line-height 1.08, angka proporsional).
    - Sub: "dari jatah Rp 65rb · terpakai Rp 29rb" (14/500).
+   - Baris Sisa uang: label "Sisa uang" (13/700, `--hero-muted`, kontras ≥4.5:1 di semua tema/state) dan nilai `currentBalance` dengan `formatFull` (14/800, contoh "Sisa uang Rp 845.000", negatif "−Rp 20.000" U+2212). Dibaca screen reader sebagai satu kalimat ("Sisa uang 845 ribu rupiah"). Tampil di state `normal`, `fresh`, `tanggal-tua`, `over`, `broke` (pada `payday-needed` saldo sudah tampil sebagai angka utama).
    - Progress bar 10px (radius 5): isi = `usedRatio`, warna koin; `role="img"` + `aria-label` ("Terpakai 45 persen dari jatah harian").
    - Bubble maskot (padding 12, radius 18): maskot 40px + satu kalimat (14/600) sesuai state (bagian 12).
 3. **Catat cepat**: label (13/700, muted) lalu baris chip template (tinggi 44, radius 22) + tombol "+" bergaris putus (44×44).
@@ -477,7 +482,15 @@ Ruang sisa di antara daftar dan dock memakai `flex: 1`; tinggi total layar harus
 Bottom sheet: segmented control Pengeluaran/Pemasukan, nominal (keypad numerik, tampilan "Rp 18.000" live), kategori (grid ikon), catatan (maks 80), tanggal (default hari ini; min `openingDate`; maks hari ini). Mode ubah menampilkan tombol "Hapus" (dengan undo). Validasi sesuai 5.4.
 
 ### 10.5 Riwayat (F6)
-Header sticky dengan filter jenis (Semua/Keluar/Masuk). Daftar dikelompokkan per hari ("Hari ini", "Kemarin", "Sel, 10 Nov"), tiap grup menampilkan total keluar hari itu. Ketuk baris → sheet ubah. Geser/aksi hapus dengan toast Batalkan. State kosong dengan maskot.
+Header sticky dengan filter jenis (Semua/Keluar/Masuk) dan dukungan filter query `?kategori=<id>&dari=<start>&sampai=<end>` yang ditampilkan sebagai chip yang bisa dihapus ("Makan · 10–16 Nov ×"). Daftar dikelompokkan per hari ("Hari ini", "Kemarin", "Sel, 10 Nov"), tiap grup menampilkan total keluar hari itu. Ketuk baris → sheet ubah. Geser/aksi hapus dengan toast Batalkan. State kosong dengan maskot.
+
+### 10.5.1 Ringkasan (F11 · 0.3.0)
+Rute `/ringkasan?periode=minggu|bulan&tanggal=YYYY-MM-DD` (lazy-loaded):
+- Header: segmented control "Minggu | Bulan", tombol `‹` dan `›` (≥44px) dengan label periode di tengah. `›` nonaktif di periode sekarang; `‹` nonaktif bila periode sebelumnya seluruhnya sebelum `openingDate`.
+- Kartu angka: Total keluar (besar), Total masuk, Selisih (`masuk − keluar`), Rata-rata keluar per hari (`floor(totalExpense / daysCounted)`), serta kalimat perbandingan adil terhadap periode lalu (tanpa merah/hijau dan tanpa kata menghakimi). Transaksi bertipe `adjustment` dikecualikan.
+- Chart A (Donut SVG `stroke-dasharray`): pengeluaran per kategori dengan jarak 2px berwarna `--surface`, total keluar di tengah, `role="img"` dengan `aria-label` ringkasan, dan legenda di bawahnya (titik `--chart-1..9`, ikon+nama, nominal pendek, persen metode largest remainder berjumlah tepat 100). Mengetuk baris legenda membuka `/riwayat?kategori=<id>&dari=<start>&sampai=<end>`.
+- Chart B (Batang HTML/flex `<button>`): pengeluaran per hari (7 batang Sen–Min untuk minggu; seluruh hari dengan label di 1, 5, 10, 15, 20, 25, 30 untuk bulan). Mengetuk/memfokus batang menampilkan keterangan tanggal & nominal di bawah chart; dilengkapi tabel `sr-only`.
+- State memuat/kosong/error terpisah; kosong menampilkan maskot Receh + "Belum ada catatan di periode ini. Yuk catat dulu.". Bila hanya ada pemasukan, area chart kategori menampilkan "Belum ada pengeluaran".
 
 ### 10.6 Pengaturan (F7)
 Bagian: **Tampilan** (tema), **Kiriman** (tanggal berikutnya, ulangi tiap bulan), **Saldo** (koreksi saldo → membuat `adjustment`), **Template** (tambah/ubah/hapus/urutkan), **Data** (Export JSON, Export CSV, Import, Hapus semua data dengan konfirmasi dua langkah), **Tentang** (versi, ringkasan privasi: "Datamu hanya ada di perangkat ini").
@@ -498,9 +511,13 @@ Karakter visual: **tenang di struktur, hangat di detail, premium di material, lo
   --ink:#231C16; --muted:#6B5E52;
   --primary:#2B3A8C; --primary-tint:#E3E7FB; --on-primary:#FFFFFF;
   --coin:#F2B33D; --coin-edge:#C98A1B;
-  --warm:#A3442B;               /* state tanggal-tua dan over */
-  --hero-bg:var(--primary);     --hero-ink:#FFFFFF;
+  --warm:#9E3F27;               /* state tanggal-tua dan over */
+  --hero-bg:var(--primary);     --hero-ink:#FFFFFF; --hero-muted:rgba(255,255,255,.85);
   --hero-track:rgba(255,255,255,.22); --hero-chip:rgba(255,255,255,.16);
+
+  /* token chart kategori (>= 3:1 vs --surface, kecerahan berdekatan berbeda):
+     --chart-1..--chart-9 di light (#2B3A8C, #B4690E, #1D5C3A, #C24E32, #52328C, #0F7A8A, #7E263D, #6E7216, #4A4540)
+     dan dark (#A9B4FF, #D98E2B, #7CE0A3, #E07052, #CEB5FF, #4AB2C4, #FFA3BA, #A69B2E, #CBC0B2) */
 
   /* nada kategori: --tone-<nama>-bg / --tone-<nama>-ink */
   --tone-makan-bg:#FDE7C2;     --tone-makan-ink:#7A4300;

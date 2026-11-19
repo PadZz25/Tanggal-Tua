@@ -62,6 +62,18 @@ function useAnimatedAmount(target: number): number {
   return displayValue;
 }
 
+function HeroAmountText({ value }: { value: string }) {
+  const commaIndex = value.indexOf(',');
+  if (commaIndex === -1) return <>{value}</>;
+  return (
+    <>
+      {value.slice(0, commaIndex)}
+      <span className="-mx-[0.06em] inline-block">,</span>
+      {value.slice(commaIndex + 1)}
+    </>
+  );
+}
+
 export function HeroCard({
   today,
   nextPayday,
@@ -217,7 +229,8 @@ export function HeroCard({
           <div className="mt-2.5">
             <p
               data-testid="hero-allowance-amount"
-              className="tabular-nums text-[52px] font-extrabold leading-[1.08] tracking-[-2px]"
+              style={{ fontVariantNumeric: 'proportional-nums' }}
+              className="text-[52px] font-extrabold leading-[1.08] tracking-[-2px]"
             >
               Rp 0
             </p>
@@ -260,9 +273,10 @@ export function HeroCard({
           <div className="mt-2.5">
             <p
               data-testid="hero-allowance-amount"
-              className="tabular-nums text-[52px] font-extrabold leading-[1.08] tracking-[-2px]"
+              style={{ fontVariantNumeric: 'proportional-nums' }}
+              className="text-[52px] font-extrabold leading-[1.08] tracking-[-2px]"
             >
-              {formatHeroShort(animatedRemaining)}
+              <HeroAmountText value={formatHeroShort(animatedRemaining)} />
             </p>
             <p className="mt-1 text-[14px] font-medium opacity-95">
               dari jatah {formatHeroShort(dailyAllowance)} · terpakai{' '}

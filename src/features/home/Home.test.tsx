@@ -47,6 +47,7 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
     );
     expect(screen.getByText('Jatah hari ini')).toBeInTheDocument();
     expect(screen.getByTestId('hero-allowance-amount')).toHaveTextContent('Rp 36rb');
+    expect(screen.getByTestId('hero-allowance-amount')).not.toHaveClass('tabular-nums');
     expect(screen.getByText(/dari jatah Rp 65rb/i)).toBeInTheDocument();
     expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Sisa uang');
     expect(screen.getByTestId('hero-total-balance')).toHaveTextContent('Rp 816.000');
@@ -151,6 +152,41 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId('hero-balance-amount')).toHaveTextContent('Rp 350.000');
     expect(screen.queryByTestId('hero-total-balance')).not.toBeInTheDocument();
+
+    // 7. Decimal comma hero values ("Rp 65,4rb" & "Rp 1,5jt") preserve exact text with proportional-nums
+    const decimalState = getHomeState({
+      today: '2026-11-18',
+      nextPayday: '2026-12-01',
+      currentBalance: 850_000,
+      spentToday: 0,
+    });
+    rerender(
+      <HeroCard
+        today="2026-11-18"
+        nextPayday="2026-12-01"
+        homeState={decimalState}
+        onConfigurePayday={noop}
+        onRecordIncome={noop}
+      />
+    );
+    expect(screen.getByTestId('hero-allowance-amount')).toHaveTextContent('Rp 65,4rb');
+
+    const millionState = getHomeState({
+      today: '2026-11-18',
+      nextPayday: '2026-11-19',
+      currentBalance: 1_500_000,
+      spentToday: 0,
+    });
+    rerender(
+      <HeroCard
+        today="2026-11-18"
+        nextPayday="2026-11-19"
+        homeState={millionState}
+        onConfigurePayday={noop}
+        onRecordIncome={noop}
+      />
+    );
+    expect(screen.getByTestId('hero-allowance-amount')).toHaveTextContent('Rp 1,5jt');
   });
 
   it('updates "Sisa uang" in real time when adding and undoing a transaction on Beranda', async () => {

@@ -393,9 +393,21 @@ export function OnboardingPage({
               <p className="text-[13px] font-semibold opacity-90">Boleh jajan hari ini</p>
               <p
                 data-testid="onboarding-final-allowance"
-                className="tabular-nums mt-1 text-[48px] font-extrabold leading-none tracking-[-1.5px]"
+                style={{ fontVariantNumeric: 'proportional-nums' }}
+                className="mt-1 text-[48px] font-extrabold leading-none tracking-[-1.5px]"
               >
-                {formatHeroShort(previewAllowance.dailyAllowance)}
+                {(() => {
+                  const formatted = formatHeroShort(previewAllowance.dailyAllowance);
+                  const idx = formatted.indexOf(',');
+                  if (idx === -1) return formatted;
+                  return (
+                    <>
+                      {formatted.slice(0, idx)}
+                      <span className="-mx-[0.06em] inline-block">,</span>
+                      {formatted.slice(idx + 1)}
+                    </>
+                  );
+                })()}
               </p>
               <p className="mt-2 text-[13px] font-medium opacity-90">
                 Dari saldo {formatFull(parsedBalance ?? 0)} untuk {daysLeft} hari ke depan

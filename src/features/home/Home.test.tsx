@@ -1,14 +1,19 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
 import { Toast } from '../../components/ui/Toast';
-import { completeOnboarding, resetAllData } from '../../data/repositories/settings';
+import {
+  completeOnboarding,
+  resetAllData,
+  updateSettings,
+} from '../../data/repositories/settings';
 import {
   createTransaction,
   getAllTransactions,
 } from '../../data/repositories/transactions';
+import { clearDismissedReminderDate } from '../../domain/reminder';
 import { getHomeState } from '../../domain/allowance';
 import { DEFAULT_CATEGORIES } from '../../domain/parser/keywords';
 import { useUIStore } from '../../hooks/useUIStore';
@@ -19,6 +24,8 @@ import { QuickAddBar } from './QuickAddBar';
 describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
   beforeEach(async () => {
     window.__TANGGAL_TUA_TODAY__ = '2026-11-18';
+    delete window.__TANGGAL_TUA_NOW_MINUTES__;
+    clearDismissedReminderDate();
     await resetAllData('2026-11-18');
     useUIStore.setState({
       toast: null,
@@ -357,5 +364,51 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
     );
     expect(container.querySelector('[data-mood="cheer"]')).toBeInTheDocument();
     expect(container.querySelector('[data-mood="wink"]')).toBeInTheDocument();
+  });
+
+  it('shows daily reminder banner when enabled & past time, focuses input, marks no-spend, dismisses until next day, and handles ?aksi=catat', async () => {
+    const user = userEvent.setup();
+    await completeOnboarding({
+      openingBalance: 845_000,
+      openingDate: '2026-11-10',
+      nextPayday: '2026-12-01',
+      paydayDay: 1,
+      theme: 'light',
+    });
+    await updateSettings({ reminderEnabled: true, reminderTime: '20:00' });
+    window.__TANGGAL_TUA_NOW_MINUTES__ = 20 * 60 + 15;
+
+    window.history.pushState({}, '', '/');
+    const { unmount } = render(<App />);
+
+    const banner = await screen.findByTestId('home-reminder-banner');
+    expect(banner).toHaveTextContent('Sudah catat jajan hari ini?');
+
+    await user.click(within(banner).getByRole('button', { name: 'Catat' }));
+    expect(document.activeElement).toBe(screen.getByPlaceholderText('Ketik: kopi 18rb'));
+
+    // Dismiss hides reminder for today
+    await user.click(screen.getByRole('button', { name: 'Tutup pengingat hari ini' }));
+    await waitFor(() => {
+      expect(screen.queryByTestId('home-reminder-banner')).not.toBeInTheDocument();
+    });
+
+    // Next day reminder shows again and can mark no-spend day
+    unmount();
+    window.__TANGGAL_TUA_TODAY__ = '2026-11-19';
+    window.history.pushState({}, '', '/?aksi=catat');
+    const second = render(<App />);
+
+    const nextBanner = await screen.findByTestId('home-reminder-banner');
+    expect(window.location.search).toBe('');
+    expect(document.activeElement).toBe(screen.getByPlaceholderText('Ketik: kopi 18rb'));
+
+    await user.click(
+      within(nextBanner).getByRole('button', { name: 'Hari ini tidak ada pengeluaran' })
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId('home-reminder-banner')).not.toBeInTheDocument();
+    });
+    second.unmount();
   });
 });

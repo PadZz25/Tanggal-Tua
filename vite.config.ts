@@ -60,6 +60,34 @@ export default defineConfig({
             purpose: 'maskable',
           },
         ],
+        shortcuts: [
+          {
+            name: 'Catat pengeluaran',
+            short_name: 'Catat',
+            description: 'Buka beranda dan langsung catat pengeluaran',
+            url: '/?aksi=catat',
+            icons: [
+              {
+                src: '/icons/icon-96.png',
+                sizes: '96x96',
+                type: 'image/png',
+              },
+            ],
+          },
+          {
+            name: 'Ringkasan',
+            short_name: 'Ringkasan',
+            description: 'Lihat ringkasan mingguan dan bulanan',
+            url: '/ringkasan',
+            icons: [
+              {
+                src: '/icons/icon-96.png',
+                sizes: '96x96',
+                type: 'image/png',
+              },
+            ],
+          },
+        ],
         screenshots: [
           {
             src: '/icons/screenshot-narrow.png',

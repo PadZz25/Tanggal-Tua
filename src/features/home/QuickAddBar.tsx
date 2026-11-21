@@ -20,6 +20,7 @@ interface QuickAddBarProps {
   dayMarks?: DayMark[];
   budgets?: Budget[];
   lastCelebratedStreak?: number;
+  inputRef?: React.RefObject<HTMLInputElement>;
 }
 
 export function QuickAddBar({
@@ -31,10 +32,12 @@ export function QuickAddBar({
   dayMarks = [],
   budgets = [],
   lastCelebratedStreak = 0,
+  inputRef: externalInputRef,
 }: QuickAddBarProps) {
   const [text, setText] = useState('');
   const [errorHint, setErrorHint] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const internalInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = externalInputRef ?? internalInputRef;
   const inputId = useId();
   const hintId = useId();
 

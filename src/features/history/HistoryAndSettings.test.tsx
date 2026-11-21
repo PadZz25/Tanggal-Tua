@@ -1,8 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
-import { completeOnboarding, resetAllData } from '../../data/repositories/settings';
+import {
+  completeOnboarding,
+  getSettings,
+  resetAllData,
+} from '../../data/repositories/settings';
 import {
   createTransaction,
   getAllTransactions,
@@ -300,5 +304,65 @@ describe('History & Settings pages (Milestone M5)', () => {
     await user.click(screen.getByRole('button', { name: 'Hapus transaksi Sisihkan laptop' }));
     expect(screen.getByRole('status')).toHaveTextContent(GOAL_TX_LOCKED_MESSAGE);
     expect(await getAllTransactions()).toHaveLength(1);
+  });
+
+  it('toggles in-app reminder, updates time, and downloads .ics calendar file from Pengaturan', async () => {
+    const user = userEvent.setup();
+    const origCreateObjectUrl = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
+    const origRevokeObjectUrl = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
+    const createObjectUrlMock = vi.fn(() => 'blob:mock-ics');
+    const revokeObjectUrlMock = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: createObjectUrlMock,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      value: revokeObjectUrlMock,
+      configurable: true,
+      writable: true,
+    });
+
+    try {
+      window.history.pushState({}, '', '/pengaturan');
+      render(<App />);
+
+      const toggle = await screen.findByRole('switch', {
+        name: 'Ingatkan di dalam app',
+      });
+      expect(toggle).toHaveAttribute('aria-checked', 'false');
+      await user.click(toggle);
+
+      await waitFor(async () => {
+        expect(toggle).toHaveAttribute('aria-checked', 'true');
+        expect((await getSettings()).reminderEnabled).toBe(true);
+      });
+
+      const timeInput = screen.getByLabelText('Jam pengingat') as HTMLInputElement;
+      expect(timeInput.value).toBe('20:00');
+      fireEvent.change(timeInput, { target: { value: '21:15' } });
+      await waitFor(async () => {
+        expect((await getSettings()).reminderTime).toBe('21:15');
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Tambah ke kalender' }));
+      expect(createObjectUrlMock).toHaveBeenCalledTimes(1);
+      const blobArg = (createObjectUrlMock.mock.calls[0] as unknown[])[0] as Blob;
+      expect(blobArg.type).toContain('text/calendar');
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Berkas pengingat kalender (.ics) berhasil diunduh'
+      );
+    } finally {
+      if (origCreateObjectUrl) {
+        Object.defineProperty(URL, 'createObjectURL', origCreateObjectUrl);
+      } else {
+        delete (URL as { createObjectURL?: unknown }).createObjectURL;
+      }
+      if (origRevokeObjectUrl) {
+        Object.defineProperty(URL, 'revokeObjectURL', origRevokeObjectUrl);
+      } else {
+        delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
+      }
+    }
   });
 });

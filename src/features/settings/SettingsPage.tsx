@@ -1,6 +1,8 @@
 import {
   ArrowDown,
   ArrowUp,
+  Bell,
+  CalendarPlus,
   Check,
   Download,
   Pencil,
@@ -43,6 +45,8 @@ import {
   MAX_AMOUNT,
   parseNominalInput,
 } from '../../domain/money';
+import { parseTimeToMinutes } from '../../domain/reminder';
+import { generateReminderIcs } from '../../lib/ics';
 import { getSelectableCategories } from '../../domain/parser/keywords';
 import type {
   PaydayRepeat,
@@ -263,6 +267,33 @@ export function SettingsPage({ live }: SettingsPageProps) {
     }
 
     setIsTplSheetOpen(false);
+  };
+
+  const handleToggleReminder = async () => {
+    const next = !live.settings.reminderEnabled;
+    await updateSettings({ reminderEnabled: next });
+    showToast({
+      message: next ? 'Pengingat di dalam app diaktifkan' : 'Pengingat di dalam app dimatikan',
+    });
+  };
+
+  const handleChangeReminderTime = async (value: string) => {
+    if (parseTimeToMinutes(value) === null) return;
+    await updateSettings({ reminderTime: value });
+  };
+
+  const handleDownloadCalendarReminder = () => {
+    const appUrl =
+      typeof window !== 'undefined' && window.location.origin
+        ? window.location.origin
+        : 'https://tanggal-tua.app';
+    const ics = generateReminderIcs({
+      time: live.settings.reminderTime,
+      startDate: live.today,
+      appUrl,
+    });
+    downloadBlob(ics, 'tanggal-tua-pengingat.ics', 'text/calendar;charset=utf-8');
+    showToast({ message: 'Berkas pengingat kalender (.ics) berhasil diunduh' });
   };
 
   const handleExportJson = async () => {
@@ -568,6 +599,93 @@ export function SettingsPage({ live }: SettingsPageProps) {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* 4b. Pengingat Harian */}
+      <section
+        aria-labelledby="settings-reminder-heading"
+        className="space-y-4 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
+      >
+        <div className="flex items-start gap-2.5">
+          <Bell size={18} strokeWidth={2.2} aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--primary)]" />
+          <div>
+            <h2
+              id="settings-reminder-heading"
+              className="text-[15px] font-extrabold text-[var(--ink)]"
+            >
+              Pengingat
+            </h2>
+            <p className="mt-0.5 text-[12px] text-[var(--muted)]">
+              Ingatkan dirimu mencatat jajan setiap hari tanpa mengirim data keluar perangkat.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-[18px] border border-[var(--border-soft)] bg-[var(--bg)] px-3.5 py-2.5">
+          <span
+            id="settings-reminder-toggle-label"
+            className="text-[14px] font-bold text-[var(--ink)]"
+          >
+            Ingatkan di dalam app
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={live.settings.reminderEnabled}
+            aria-labelledby="settings-reminder-toggle-label"
+            onClick={() => void handleToggleReminder()}
+            className="inline-flex min-h-[44px] min-w-[56px] shrink-0 items-center justify-center"
+          >
+            <span
+              style={{
+                backgroundColor: live.settings.reminderEnabled
+                  ? 'var(--primary)'
+                  : 'var(--border-control)',
+              }}
+              className="relative inline-flex h-[32px] w-[56px] items-center rounded-full p-1 transition-colors"
+            >
+              <span
+                aria-hidden="true"
+                className={`h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                  live.settings.reminderEnabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </span>
+          </button>
+        </div>
+
+        <div>
+          <label
+            htmlFor="settings-reminder-time"
+            className="mb-1 block text-[13px] font-bold text-[var(--ink)]"
+          >
+            Jam pengingat
+          </label>
+          <input
+            id="settings-reminder-time"
+            name="reminderTime"
+            type="time"
+            value={live.settings.reminderTime}
+            onChange={(e) => void handleChangeReminderTime(e.target.value)}
+            className="min-h-[48px] w-full rounded-[16px] border border-[var(--border-control)] bg-[var(--bg)] px-3.5 text-[16px] font-semibold text-[var(--ink)]"
+          />
+        </div>
+
+        <div className="border-t border-[var(--border-soft)] pt-3">
+          <button
+            type="button"
+            onClick={handleDownloadCalendarReminder}
+            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--border-control)] bg-[var(--bg)] px-4 text-[13px] font-extrabold text-[var(--ink)] hover:bg-[var(--border-soft)]"
+          >
+            <CalendarPlus size={16} strokeWidth={2.2} aria-hidden="true" />
+            <span>Tambah ke kalender</span>
+          </button>
+          <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
+            Notifikasi tepat waktu dikirim oleh aplikasi kalender bawaan perangkat setelah kamu
+            mengimpor berkas jadwal ini. Tanggal Tua sengaja dibuat lokal tanpa server dan tanpa
+            pelacak, sehingga tidak mengirim notifikasi latar belakang sendiri.
+          </p>
+        </div>
       </section>
 
       {/* 5. Data: Export / Import / Reset */}

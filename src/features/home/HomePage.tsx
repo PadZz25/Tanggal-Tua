@@ -1,6 +1,6 @@
-import { AlertCircle, Plus, Target } from 'lucide-react';
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { AlertCircle, Bell, Plus, Target, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Wordmark } from '../../components/brand/Wordmark';
 import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
 import { ProgressBar } from '../../components/ui/ProgressBar';
@@ -13,7 +13,13 @@ import {
 import { pickPrimaryActiveGoal } from '../../domain/goals';
 import { formatHeroShort, isValidAmount, parseNominalInput } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
+import {
+  readDismissedReminderDate,
+  shouldShowDailyReminder,
+  writeDismissedReminderDate,
+} from '../../domain/reminder';
 import { computeGoalSaved, GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
+import { useCurrentMinutes } from '../../hooks/useCurrentMinutes';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { useUIStore } from '../../hooks/useUIStore';
 import { HeroCard } from './HeroCard';
@@ -29,15 +35,33 @@ interface HomePageProps {
 
 export function HomePage({ live }: HomePageProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const openTransactionSheet = useUIStore((s) => s.openTransactionSheet);
   const showToast = useUIStore((s) => s.showToast);
 
+  const quickAddInputRef = useRef<HTMLInputElement>(null);
+  const currentMinutes = useCurrentMinutes();
+  const [dismissedReminderDate, setDismissedReminderDate] = useState<string | null>(() =>
+    readDismissedReminderDate()
+  );
   const [isStreakOpen, setIsStreakOpen] = useState(false);
   const [isAddTemplateOpen, setIsAddTemplateOpen] = useState(false);
   const [tplLabel, setTplLabel] = useState('');
   const [tplAmountRaw, setTplAmountRaw] = useState('');
   const [tplCategoryId, setTplCategoryId] = useState('cat-jajan');
   const [tplError, setTplError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const search = window.location.search || location.search;
+    const params = new URLSearchParams(search);
+    if (params.get('aksi') === 'catat') {
+      quickAddInputRef.current?.focus();
+      params.delete('aksi');
+      const nextQuery = params.toString();
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`;
+      window.history.replaceState(window.history.state, '', nextUrl);
+    }
+  }, [location.search]);
 
   const expenseCategories = getSelectableCategories(live.categories, 'expense');
   const primaryGoal = pickPrimaryActiveGoal(live.goals);
@@ -51,6 +75,21 @@ export function HomePage({ live }: HomePageProps) {
   );
   const budgetAlertText = formatBudgetHomeAlert(budgetEvaluations, live.categoryMap);
   const hasHabisBudget = budgetEvaluations.some((e) => e.status === 'habis');
+
+  const showReminderBanner = shouldShowDailyReminder({
+    enabled: live.settings.reminderEnabled,
+    reminderTime: live.settings.reminderTime,
+    currentMinutes,
+    today: live.today,
+    dismissedDate: dismissedReminderDate,
+    transactions: live.transactions,
+    dayMarks: live.dayMarks,
+  });
+
+  const handleDismissReminder = () => {
+    writeDismissedReminderDate(live.today);
+    setDismissedReminderDate(live.today);
+  };
 
   const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +141,55 @@ export function HomePage({ live }: HomePageProps) {
         onConfigurePayday={() => navigate('/pengaturan')}
         onRecordIncome={() => openTransactionSheet({ defaultType: 'income' })}
       />
+
+      {showReminderBanner && (
+        <section
+          aria-label="Pengingat catat harian"
+          data-testid="home-reminder-banner"
+          className="mt-2.5 rounded-[20px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Bell size={16} strokeWidth={2.2} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
+              <p className="text-[14px] font-extrabold text-[var(--ink)]">
+                Sudah catat jajan hari ini?
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDismissReminder}
+              aria-label="Tutup pengingat hari ini"
+              className="-mr-1.5 -mt-1.5 inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--ink)]"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => quickAddInputRef.current?.focus()}
+              style={{ backgroundColor: 'var(--primary)', color: 'var(--on-primary)' }}
+              className="min-h-[44px] rounded-[14px] px-4 text-[13px] font-extrabold"
+            >
+              Catat
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                void markNoSpendTodayWithEffects({
+                  transactions: live.transactions,
+                  dayMarks: live.dayMarks,
+                  lastCelebratedStreak: live.settings.lastCelebratedStreak,
+                  today: live.today,
+                })
+              }
+              className="min-h-[44px] rounded-[14px] border border-[var(--border-control)] bg-[var(--bg)] px-3.5 text-[13px] font-bold text-[var(--ink)]"
+            >
+              Hari ini tidak ada pengeluaran
+            </button>
+          </div>
+        </section>
+      )}
 
       {budgetAlertText && (
         <Link
@@ -175,6 +263,7 @@ export function HomePage({ live }: HomePageProps) {
       )}
 
       <QuickAddBar
+        inputRef={quickAddInputRef}
         today={live.today}
         openingDate={live.settings.openingDate}
         categories={live.categories}

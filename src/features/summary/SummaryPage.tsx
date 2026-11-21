@@ -1,9 +1,18 @@
-import { ChevronLeft, ChevronRight, Target } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Target,
+  Wallet,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { LoadFailureScreen } from '../../components/layout/AppErrorBoundary';
 import { ProgressBar } from '../../components/ui/ProgressBar';
+import { evaluateAllBudgets } from '../../domain/budgets';
 import { UI_STRINGS } from '../../domain/copy';
 import { pickPrimaryActiveGoal } from '../../domain/goals';
 import { generateInsights } from '../../domain/insights';
@@ -127,6 +136,12 @@ export function SummaryPage({ live }: SummaryPageProps) {
   const primaryGoalSaved = primaryGoal
     ? computeGoalSaved(live.transactions, primaryGoal.id)
     : 0;
+  const budgetEvaluations = evaluateAllBudgets(
+    live.budgets,
+    live.transactions,
+    live.today
+  );
+  const topBudgets = budgetEvaluations.slice(0, 3);
 
   const handleSelectKind = (nextKind: PeriodKind) => {
     setSearchParams({
@@ -320,6 +335,84 @@ export function SummaryPage({ live }: SummaryPageProps) {
           />
         </>
       )}
+
+      <section
+        aria-labelledby="summary-budgets-heading"
+        data-testid="summary-budgets-card"
+        className="rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary-tint)] text-[var(--primary)]"
+            >
+              <Wallet size={16} strokeWidth={2.2} />
+            </span>
+            <h2
+              id="summary-budgets-heading"
+              className="text-[15px] font-extrabold text-[var(--ink)]"
+            >
+              Anggaran
+            </h2>
+          </div>
+          <Link
+            to="/anggaran"
+            className="inline-flex min-h-[44px] items-center rounded-xl px-2 text-[13px] font-bold text-[var(--primary)] hover:underline"
+          >
+            {budgetEvaluations.length > 0 ? 'Lihat semua' : 'Atur anggaran'}
+          </Link>
+        </div>
+
+        {topBudgets.length === 0 ? (
+          <p className="mt-2 text-[13px] font-medium text-[var(--muted)]">
+            Belum ada batas kategori. Atur supaya pengeluaran Jajan atau Makan lebih terpantau.
+          </p>
+        ) : (
+          <ul className="mt-2.5 space-y-3">
+            {topBudgets.map((ev) => {
+              const catName = live.categoryMap.get(ev.budget.categoryId)?.name ?? 'Kategori';
+              const barColor =
+                ev.status === 'habis'
+                  ? 'var(--warm-ink)'
+                  : ev.status === 'hampir'
+                    ? 'var(--status-hampir)'
+                    : 'var(--primary)';
+              const StatusIcon =
+                ev.status === 'habis'
+                  ? AlertTriangle
+                  : ev.status === 'hampir'
+                    ? AlertCircle
+                    : CheckCircle2;
+              const pct = Math.min(100, Math.round(ev.ratio * 100));
+              return (
+                <li key={ev.budget.categoryId} className="space-y-1">
+                  <div className="flex items-center justify-between gap-2 text-[13px]">
+                    <span className="inline-flex items-center gap-1.5 font-bold text-[var(--ink)]">
+                      <StatusIcon
+                        size={14}
+                        strokeWidth={2.3}
+                        style={{ color: barColor }}
+                        aria-hidden="true"
+                      />
+                      <span>{catName}</span>
+                    </span>
+                    <span style={{ color: barColor }} className="font-extrabold">
+                      {ev.statusText}
+                    </span>
+                  </div>
+                  <div className="h-[8px] w-full overflow-hidden rounded-[4px] bg-[var(--border-soft)]">
+                    <div
+                      className="h-full rounded-[4px]"
+                      style={{ width: `${pct}%`, backgroundColor: barColor }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section
         aria-labelledby="summary-goals-heading"

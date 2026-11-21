@@ -16,6 +16,7 @@ const SummaryPage = lazy(() => import('../features/summary/SummaryPage'));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage'));
 const GoalsPage = lazy(() => import('../features/goals/GoalsPage'));
 const GoalDetailPage = lazy(() => import('../features/goals/GoalDetailPage'));
+const BudgetsPage = lazy(() => import('../features/budgets/BudgetsPage'));
 
 export const APP_NAME = UI_STRINGS.appName;
 
@@ -73,6 +74,7 @@ export function AppRoutes() {
           <Route path="/ringkasan" element={<SummaryPage live={live} />} />
           <Route path="/target" element={<GoalsPage live={live} />} />
           <Route path="/target/:id" element={<GoalDetailPage live={live} />} />
+          <Route path="/anggaran" element={<BudgetsPage live={live} />} />
           <Route path="/pengaturan" element={<SettingsPage live={live} />} />
           <Route path="/onboarding" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -85,6 +87,7 @@ export function AppRoutes() {
         categories={live.categories}
         transactions={live.transactions}
         dayMarks={live.dayMarks}
+        budgets={live.budgets}
         lastCelebratedStreak={live.settings.lastCelebratedStreak}
       />
     </AppShell>

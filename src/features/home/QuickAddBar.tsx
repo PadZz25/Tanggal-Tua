@@ -7,7 +7,7 @@ import {
 import { UI_STRINGS } from '../../domain/copy';
 import { formatShort } from '../../domain/money';
 import { parseQuickAdd } from '../../domain/parser/parseQuickAdd';
-import type { Category, DayMark, Transaction } from '../../domain/types';
+import type { Budget, Category, DayMark, Transaction } from '../../domain/types';
 import { useViewportKeyboard } from '../../hooks/useViewportKeyboard';
 import { runNewTransactionEffects } from '../transactions/postSaveEffects';
 
@@ -18,6 +18,7 @@ interface QuickAddBarProps {
   categoryMap: Map<string, Category>;
   transactions?: Transaction[];
   dayMarks?: DayMark[];
+  budgets?: Budget[];
   lastCelebratedStreak?: number;
 }
 
@@ -28,6 +29,7 @@ export function QuickAddBar({
   categoryMap,
   transactions = [],
   dayMarks = [],
+  budgets = [],
   lastCelebratedStreak = 0,
 }: QuickAddBarProps) {
   const [text, setText] = useState('');
@@ -83,6 +85,8 @@ export function QuickAddBar({
       createdTx: created,
       transactionsBefore: transactions,
       dayMarks,
+      budgets,
+      categoryMap,
       lastCelebratedStreak,
       today,
       baseMessage: `Tersimpan · ${created.note} ${formattedDelta}`,

@@ -5,7 +5,7 @@ import {
 } from '../../data/repositories/templates';
 import { UI_STRINGS } from '../../domain/copy';
 import { formatShort } from '../../domain/money';
-import type { DayMark, Template, Transaction } from '../../domain/types';
+import type { Budget, Category, DayMark, Template, Transaction } from '../../domain/types';
 import { runNewTransactionEffects } from '../transactions/postSaveEffects';
 
 interface QuickChipsProps {
@@ -13,6 +13,8 @@ interface QuickChipsProps {
   today: string;
   transactions?: Transaction[];
   dayMarks?: DayMark[];
+  budgets?: Budget[];
+  categoryMap?: ReadonlyMap<string, Category>;
   lastCelebratedStreak?: number;
   currentStreak: number;
   onOpenStreakSheet: () => void;
@@ -24,6 +26,8 @@ export function QuickChips({
   today,
   transactions = [],
   dayMarks = [],
+  budgets = [],
+  categoryMap = new Map(),
   lastCelebratedStreak = 0,
   currentStreak,
   onOpenStreakSheet,
@@ -39,6 +43,8 @@ export function QuickChips({
       createdTx: transaction,
       transactionsBefore: transactions,
       dayMarks,
+      budgets,
+      categoryMap,
       lastCelebratedStreak,
       today,
       baseMessage: `Tersimpan · ${tpl.label} ${formatShort(-tpl.amount)}`,

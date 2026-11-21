@@ -1,4 +1,4 @@
-import { Plus, Target } from 'lucide-react';
+import { AlertCircle, Plus, Target } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Wordmark } from '../../components/brand/Wordmark';
@@ -6,6 +6,10 @@ import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Sheet } from '../../components/ui/Sheet';
 import { createTemplate } from '../../data/repositories/templates';
+import {
+  evaluateAllBudgets,
+  formatBudgetHomeAlert,
+} from '../../domain/budgets';
 import { pickPrimaryActiveGoal } from '../../domain/goals';
 import { formatHeroShort, isValidAmount, parseNominalInput } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
@@ -40,6 +44,13 @@ export function HomePage({ live }: HomePageProps) {
   const primaryGoalSaved = primaryGoal
     ? computeGoalSaved(live.transactions, primaryGoal.id)
     : 0;
+  const budgetEvaluations = evaluateAllBudgets(
+    live.budgets,
+    live.transactions,
+    live.today
+  );
+  const budgetAlertText = formatBudgetHomeAlert(budgetEvaluations, live.categoryMap);
+  const hasHabisBudget = budgetEvaluations.some((e) => e.status === 'habis');
 
   const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,11 +103,30 @@ export function HomePage({ live }: HomePageProps) {
         onRecordIncome={() => openTransactionSheet({ defaultType: 'income' })}
       />
 
+      {budgetAlertText && (
+        <Link
+          to="/anggaran"
+          data-testid="home-budget-alert"
+          style={{
+            backgroundColor: hasHabisBudget
+              ? 'var(--status-habis-bg)'
+              : 'var(--status-hampir-bg)',
+            color: hasHabisBudget ? 'var(--warm-ink)' : 'var(--status-hampir)',
+          }}
+          className="mt-2.5 flex min-h-[44px] items-center gap-2 rounded-[16px] px-3.5 py-2 text-[13px] font-extrabold transition-opacity hover:opacity-90"
+        >
+          <AlertCircle size={16} strokeWidth={2.3} aria-hidden="true" className="shrink-0" />
+          <span className="truncate">{budgetAlertText}</span>
+        </Link>
+      )}
+
       <QuickChips
         templates={live.topTemplates}
         today={live.today}
         transactions={live.transactions}
         dayMarks={live.dayMarks}
+        budgets={live.budgets}
+        categoryMap={live.categoryMap}
         lastCelebratedStreak={live.settings.lastCelebratedStreak}
         currentStreak={live.streak.currentStreak}
         onOpenStreakSheet={() => setIsStreakOpen(true)}
@@ -151,6 +181,7 @@ export function HomePage({ live }: HomePageProps) {
         categoryMap={live.categoryMap}
         transactions={live.transactions}
         dayMarks={live.dayMarks}
+        budgets={live.budgets}
         lastCelebratedStreak={live.settings.lastCelebratedStreak}
       />
 

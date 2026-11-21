@@ -3,13 +3,14 @@ import {
   removeDayMark,
 } from '../../data/repositories/dayMarks';
 import { updateSettings } from '../../data/repositories/settings';
+import { evaluateBudgetCrossingForNewTx } from '../../domain/budgets';
 import {
   computeStreak,
   getFirstLogTodayCopy,
   getMilestoneCelebrationCopy,
   resolveStreakMilestone,
 } from '../../domain/streak';
-import type { DayMark, Transaction } from '../../domain/types';
+import type { Budget, Category, DayMark, Transaction } from '../../domain/types';
 import { useUIStore } from '../../hooks/useUIStore';
 import { triggerHaptic } from '../../lib/haptics';
 import { requestPersistentStorage } from '../../lib/pwa';
@@ -18,6 +19,8 @@ export async function runNewTransactionEffects(params: {
   createdTx: Transaction;
   transactionsBefore: Transaction[];
   dayMarks: DayMark[];
+  budgets?: Budget[];
+  categoryMap?: ReadonlyMap<string, Pick<Category, 'id' | 'name'>>;
   lastCelebratedStreak: number;
   today: string;
   baseMessage: string;
@@ -27,6 +30,8 @@ export async function runNewTransactionEffects(params: {
     createdTx,
     transactionsBefore,
     dayMarks,
+    budgets = [],
+    categoryMap = new Map(),
     lastCelebratedStreak,
     today,
     baseMessage,
@@ -53,6 +58,14 @@ export async function runNewTransactionEffects(params: {
     lastCelebratedStreak,
   });
 
+  const budgetCrossingMsg = evaluateBudgetCrossingForNewTx({
+    budgets,
+    transactionsBefore,
+    createdTx,
+    categoryMap,
+    today,
+  });
+
   const parts = [baseMessage];
 
   if (milestoneReached) {
@@ -62,6 +75,10 @@ export async function runNewTransactionEffects(params: {
     parts.push(copy.toastMessage);
   } else if (!prevStreak.isLoggedToday && nextStreak.isLoggedToday) {
     parts.push(getFirstLogTodayCopy(today, nextStreak.currentStreak));
+  }
+
+  if (budgetCrossingMsg) {
+    parts.push(budgetCrossingMsg);
   }
 
   triggerHaptic(10);

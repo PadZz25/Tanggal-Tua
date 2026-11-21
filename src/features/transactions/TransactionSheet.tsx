@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { CategoryIcon } from '../../components/ui/CategoryIcon';
 import { Sheet } from '../../components/ui/Sheet';
 import {
@@ -16,7 +16,7 @@ import {
 } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
 import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
-import type { Category, DayMark, Transaction } from '../../domain/types';
+import type { Budget, Category, DayMark, Transaction } from '../../domain/types';
 import { useUIStore } from '../../hooks/useUIStore';
 import { triggerHaptic } from '../../lib/haptics';
 import { runNewTransactionEffects } from './postSaveEffects';
@@ -27,6 +27,7 @@ interface TransactionSheetProps {
   categories: Category[];
   transactions: Transaction[];
   dayMarks?: DayMark[];
+  budgets?: Budget[];
   lastCelebratedStreak?: number;
 }
 
@@ -36,8 +37,13 @@ export function TransactionSheet({
   categories,
   transactions,
   dayMarks = [],
+  budgets = [],
   lastCelebratedStreak = 0,
 }: TransactionSheetProps) {
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c])),
+    [categories]
+  );
   const isOpen = useUIStore((s) => s.isTransactionSheetOpen);
   const editingId = useUIStore((s) => s.editingTransactionId);
   const defaultType = useUIStore((s) => s.defaultTransactionType);
@@ -171,6 +177,8 @@ export function TransactionSheet({
         createdTx: created,
         transactionsBefore: transactions,
         dayMarks,
+        budgets,
+        categoryMap,
         lastCelebratedStreak,
         today,
         baseMessage: `Tersimpan · ${created.note} ${signPrefix}`,

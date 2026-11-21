@@ -7,6 +7,7 @@ import { Sheet } from '../../components/ui/Sheet';
 import { createTemplate } from '../../data/repositories/templates';
 import { isValidAmount, parseNominalInput } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
+import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { useUIStore } from '../../hooks/useUIStore';
 import { HeroCard } from './HeroCard';
@@ -21,6 +22,7 @@ interface HomePageProps {
 export function HomePage({ live }: HomePageProps) {
   const navigate = useNavigate();
   const openTransactionSheet = useUIStore((s) => s.openTransactionSheet);
+  const showToast = useUIStore((s) => s.showToast);
 
   const [isAddTemplateOpen, setIsAddTemplateOpen] = useState(false);
   const [tplLabel, setTplLabel] = useState('');
@@ -93,7 +95,13 @@ export function HomePage({ live }: HomePageProps) {
       <TodayList
         transactions={live.todayTransactions}
         categoryMap={live.categoryMap}
-        onSelectTransaction={(tx) => openTransactionSheet({ transactionId: tx.id })}
+        onSelectTransaction={(tx) => {
+          if (tx.goalId) {
+            showToast({ message: GOAL_TX_LOCKED_MESSAGE });
+            return;
+          }
+          openTransactionSheet({ transactionId: tx.id });
+        }}
       />
 
       <QuickAddBar

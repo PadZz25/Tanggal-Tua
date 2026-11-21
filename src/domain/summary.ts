@@ -33,6 +33,7 @@ export interface PeriodSummary {
   totalExpense: number;
   totalIncome: number;
   net: number;
+  saved: number;
   dailyTotals: DailyTotal[];
   byCategory: CategoryTotal[];
   avgPerDay: number;
@@ -156,7 +157,11 @@ function allocateLargestRemainderPercents(
 }
 
 export function summarize(
-  transactions: ReadonlyArray<Pick<Transaction, 'type' | 'amount' | 'categoryId' | 'date'>>,
+  transactions: ReadonlyArray<
+    Pick<Transaction, 'type' | 'amount' | 'categoryId' | 'date'> & {
+      goalId?: string | null;
+    }
+  >,
   range: PeriodRange,
   today: string,
   openingDate: string
@@ -170,12 +175,18 @@ export function summarize(
 
   let totalExpense = 0;
   let totalIncome = 0;
+  let saved = 0;
   let txCount = 0;
   const categoryTotalsMap = new Map<string, number>();
 
   for (const tx of transactions) {
     if (tx.type !== 'expense' && tx.type !== 'income') continue;
     if (tx.date < range.start || tx.date > range.end) continue;
+
+    if (tx.goalId) {
+      saved += tx.type === 'expense' ? tx.amount : -tx.amount;
+      continue;
+    }
 
     txCount += 1;
     if (tx.type === 'expense') {
@@ -219,6 +230,7 @@ export function summarize(
     totalExpense,
     totalIncome,
     net: totalIncome - totalExpense,
+    saved,
     dailyTotals,
     byCategory,
     avgPerDay,

@@ -59,9 +59,16 @@ export function TransactionRow({
           size={40}
         />
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-bold text-[var(--ink)]">
-            {transaction.note}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="truncate text-[15px] font-bold text-[var(--ink)]">
+              {transaction.note}
+            </p>
+            {transaction.goalId && (
+              <span className="shrink-0 rounded-full bg-[var(--primary-tint)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary)]">
+                Tabungan
+              </span>
+            )}
+          </div>
           <p className="truncate text-[12px] font-medium text-[var(--muted)]">
             {subtitle}
           </p>

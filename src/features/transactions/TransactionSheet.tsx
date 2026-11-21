@@ -15,6 +15,7 @@ import {
   parseNominalInput,
 } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
+import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
 import type { Category, Transaction } from '../../domain/types';
 import { useUIStore } from '../../hooks/useUIStore';
 import { triggerHaptic } from '../../lib/haptics';
@@ -100,6 +101,11 @@ export function TransactionSheet({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    if (editingTx?.goalId) {
+      setErrorMsg(GOAL_TX_LOCKED_MESSAGE);
+      return;
+    }
+
     if (parsedAmount === null || !isValidAmount(parsedAmount)) {
       setErrorMsg('Masukkan nominal antara Rp 1 sampai Rp 1.000.000.000');
       return;
@@ -172,6 +178,11 @@ export function TransactionSheet({
 
   const handleDelete = async () => {
     if (!editingTx) return;
+    if (editingTx.goalId) {
+      showToast({ message: GOAL_TX_LOCKED_MESSAGE });
+      closeSheet();
+      return;
+    }
     const targetTx = editingTx;
     await deleteTransaction(targetTx.id);
     triggerHaptic(10);

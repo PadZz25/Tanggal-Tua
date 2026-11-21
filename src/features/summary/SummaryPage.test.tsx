@@ -225,4 +225,33 @@ describe('SummaryPage & History query filters (0.3.0 Tugas 3)', () => {
       expect(screen.getByText('Tanpa kategori')).toBeInTheDocument();
     });
   });
+
+  it('displays "Ditabung Rp X" row without counting goal transactions as expense/income', () => {
+    render(
+      <MemoryRouter initialEntries={['/ringkasan']}>
+        <SummaryPage
+          live={makeMockLive({
+            transactions: [
+              {
+                id: 'sav-1',
+                type: 'expense',
+                amount: 130_000,
+                categoryId: 'cat-tabungan',
+                goalId: 'goal-1',
+                note: 'Sisihkan target',
+                date: '2026-11-18',
+                occurredAt: '2026-11-18T08:00:00.000Z',
+                source: 'form',
+                createdAt: '2026-11-18T08:00:00.000Z',
+                updatedAt: '2026-11-18T08:00:00.000Z',
+              },
+            ],
+          })}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('summary-total-expense')).toHaveTextContent('Rp 0');
+    expect(screen.getByTestId('summary-saved')).toHaveTextContent('Ditabung Rp 130.000');
+  });
 });

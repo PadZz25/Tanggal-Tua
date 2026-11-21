@@ -202,8 +202,39 @@ describe('summary domain pure functions (0.3.0 Tugas 2)', () => {
       expect(empty.totalIncome).toBe(0);
       expect(empty.net).toBe(0);
       expect(empty.txCount).toBe(0);
+      expect(empty.saved).toBe(0);
       expect(empty.byCategory).toEqual([]);
       expect(empty.avgPerDay).toBe(0);
+    });
+
+    it('excludes goal-linked transactions from expense/income totals and tracks net saved amount', () => {
+      const range = getPeriodRange('week', '2026-11-18');
+      const txs = [
+        makeTx({ type: 'expense', amount: 25_000, date: '2026-11-18', categoryId: 'cat-makan' }),
+        makeTx({
+          type: 'expense',
+          amount: 200_000,
+          date: '2026-11-18',
+          categoryId: 'cat-tabungan',
+          goalId: 'goal-laptop',
+        }),
+        makeTx({
+          type: 'income',
+          amount: 50_000,
+          date: '2026-11-19',
+          categoryId: 'cat-tarik-tabungan',
+          goalId: 'goal-laptop',
+        }),
+      ];
+
+      const summary = summarize(txs, range, '2026-11-20', '2026-11-01');
+      expect(summary.totalExpense).toBe(25_000);
+      expect(summary.totalIncome).toBe(0);
+      expect(summary.txCount).toBe(1);
+      expect(summary.saved).toBe(150_000);
+      expect(summary.byCategory).toEqual([
+        { categoryId: 'cat-makan', amount: 25_000, percent: 100 },
+      ]);
     });
   });
 

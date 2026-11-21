@@ -186,7 +186,7 @@ export function SummaryPage({ live }: SummaryPageProps) {
         </div>
       </header>
 
-      {currentSummary.txCount === 0 ? (
+      {currentSummary.txCount === 0 && currentSummary.saved === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] border border-[var(--border)] bg-[var(--surface)] px-5 py-10 text-center">
           <Mascot mood="smile" size={52} />
           <p className="mt-3 text-[14px] font-semibold text-[var(--muted)]">
@@ -247,6 +247,18 @@ export function SummaryPage({ live }: SummaryPageProps) {
                 </p>
               </div>
             </div>
+
+            {currentSummary.saved !== 0 && (
+              <p
+                data-testid="summary-saved"
+                className="mt-3 flex items-center justify-between border-t border-[var(--border-soft)] pt-2.5 text-[13px]"
+              >
+                <span className="font-bold text-[var(--muted)]">Ditabung{' '}</span>
+                <span className="tabular-nums font-extrabold text-[var(--ink)]">
+                  {formatFull(currentSummary.saved)}
+                </span>
+              </p>
+            )}
 
             {comparison.text && (
               <p

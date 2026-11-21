@@ -13,6 +13,7 @@ import {
   formatShortDate,
 } from '../../domain/dates';
 import { formatShort } from '../../domain/money';
+import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
 import type { Transaction } from '../../domain/types';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { useUIStore } from '../../hooks/useUIStore';
@@ -105,7 +106,7 @@ export function HistoryPage({ live }: HistoryPageProps) {
     for (const tx of filteredTransactions) {
       const existing = groups.get(tx.date) ?? { items: [], totalExpense: 0 };
       existing.items.push(tx);
-      if (tx.type === 'expense') {
+      if (tx.type === 'expense' && !tx.goalId) {
         existing.totalExpense += tx.amount;
       }
       groups.set(tx.date, existing);
@@ -114,7 +115,19 @@ export function HistoryPage({ live }: HistoryPageProps) {
     return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filteredTransactions]);
 
+  const handleSelectTransaction = (tx: Transaction) => {
+    if (tx.goalId) {
+      showToast({ message: GOAL_TX_LOCKED_MESSAGE });
+      return;
+    }
+    openTransactionSheet({ transactionId: tx.id });
+  };
+
   const handleQuickDelete = async (tx: Transaction) => {
+    if (tx.goalId) {
+      showToast({ message: GOAL_TX_LOCKED_MESSAGE });
+      return;
+    }
     await deleteTransaction(tx.id);
     triggerHaptic(10);
 
@@ -233,9 +246,7 @@ export function HistoryPage({ live }: HistoryPageProps) {
                         category={
                           tx.categoryId ? live.categoryMap.get(tx.categoryId) : undefined
                         }
-                        onSelect={(item) =>
-                          openTransactionSheet({ transactionId: item.id })
-                        }
+                        onSelect={handleSelectTransaction}
                       />
                     </div>
                     <button

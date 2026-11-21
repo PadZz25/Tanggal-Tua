@@ -7,6 +7,10 @@ import {
   createTransaction,
   getAllTransactions,
 } from '../../data/repositories/transactions';
+import {
+  SYSTEM_CATEGORY_SAVING_ID,
+} from '../../domain/parser/keywords';
+import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
 import { useUIStore } from '../../hooks/useUIStore';
 
 describe('History & Settings pages (Milestone M5)', () => {
@@ -266,5 +270,35 @@ describe('History & Settings pages (Milestone M5)', () => {
         'Kiriman berikutnya: Sabtu, 21 Nov (3 hari lagi)'
       );
     });
+  });
+
+  it('labels goal-linked transactions with Tabungan and prevents edit or delete from Riwayat', async () => {
+    const user = userEvent.setup();
+
+    await createTransaction({
+      type: 'expense',
+      amount: 100_000,
+      categoryId: SYSTEM_CATEGORY_SAVING_ID,
+      goalId: 'goal-test',
+      note: 'Sisihkan laptop',
+      date: '2026-11-18',
+      source: 'form',
+    });
+
+    window.history.pushState({}, '', '/riwayat');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Sisihkan laptop')).toBeInTheDocument();
+      expect(screen.getByText('Tabungan')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Sisihkan laptop'));
+    expect(screen.getByRole('status')).toHaveTextContent(GOAL_TX_LOCKED_MESSAGE);
+    expect(screen.queryByRole('heading', { name: 'Ubah Transaksi' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Hapus transaksi Sisihkan laptop' }));
+    expect(screen.getByRole('status')).toHaveTextContent(GOAL_TX_LOCKED_MESSAGE);
+    expect(await getAllTransactions()).toHaveLength(1);
   });
 });

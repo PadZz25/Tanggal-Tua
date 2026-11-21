@@ -13,7 +13,9 @@ export function computeBalances(params: {
   openingBalance: number;
   openingDate: string;
   today: string;
-  transactions: ReadonlyArray<Pick<Transaction, 'type' | 'amount' | 'date'>>;
+  transactions: ReadonlyArray<
+    Pick<Transaction, 'type' | 'amount' | 'date'> & { goalId?: string | null }
+  >;
 }): { currentBalance: number; spentToday: number } {
   let currentBalance = params.openingBalance;
   let spentToday = 0;
@@ -29,7 +31,7 @@ export function computeBalances(params: {
       }
     }
 
-    if (tx.date === params.today && tx.type === 'expense') {
+    if (tx.date === params.today && tx.type === 'expense' && !tx.goalId) {
       spentToday += tx.amount;
     }
   }

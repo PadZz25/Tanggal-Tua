@@ -191,4 +191,29 @@ describe('SummaryPage & History query filters (0.3.0 Tugas 3)', () => {
       expect(screen.getByText('Nasi padang')).toBeInTheDocument();
     });
   });
+
+  it('matches null-category expenses under Lainnya when navigating from SummaryPage donut to Riwayat', async () => {
+    const user = userEvent.setup();
+    await createTransaction({
+      type: 'expense',
+      amount: 25_000,
+      categoryId: null,
+      note: 'Tanpa kategori',
+      date: '2026-11-18',
+      source: 'form',
+    });
+
+    window.history.pushState({}, '', '/ringkasan');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('summary-total-expense')).toHaveTextContent('Rp 25.000');
+    });
+
+    await user.click(screen.getByRole('link', { name: /Lainnya/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Riwayat' })).toBeInTheDocument();
+      expect(screen.getByText('Tanpa kategori')).toBeInTheDocument();
+    });
+  });
 });

@@ -42,6 +42,10 @@ describe('money domain functions', () => {
       expect(formatHeroShort(65000)).toBe('Rp 65rb');
       expect(formatHeroShort(-8000)).toBe(`${MINUS_SIGN}Rp 8rb`);
       expect(formatHeroShort(0)).toBe('Rp 0');
+      expect(formatShort(999_949)).toBe('999,9rb');
+      expect(formatShort(999_950)).toBe('1jt');
+      expect(formatShort(999_999)).toBe('1jt');
+      expect(formatHeroShort(999_999)).toBe('Rp 1jt');
     });
   });
 
@@ -77,7 +81,10 @@ describe('money domain functions', () => {
       expect(parseNominalInput('850rb')).toBe(850_000);
       expect(parseNominalInput('1,5jt')).toBe(1_500_000);
       expect(parseNominalInput('Rp 250.000')).toBe(250_000);
+      expect(parseNominalInput('1.500.000')).toBe(1_500_000);
       expect(parseNominalInput('50000')).toBe(50_000);
+      expect(parseNominalInput('1.5')).toBeNull();
+      expect(parseNominalInput('15.50')).toBeNull();
       expect(parseNominalInput('abc')).toBeNull();
     });
   });

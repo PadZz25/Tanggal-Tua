@@ -38,11 +38,14 @@ export async function exportToJson(nowIso: string = new Date().toISOString()): P
 }
 
 function escapeCsvCell(value: string | number): string {
-  const str = String(value);
-  if (/[",\r\n]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`;
+  if (typeof value === 'number') {
+    return String(value);
   }
-  return str;
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  if (/[",\r\n]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
+  }
+  return safe;
 }
 
 export async function exportToCsv(): Promise<string> {

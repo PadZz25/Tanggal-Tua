@@ -64,7 +64,6 @@ export interface AppLiveState {
 
 export function useHomeState(): AppLiveState {
   const currentToday = useToday();
-  const pendingDeleteIds = useUIStore((s) => s.pendingDeleteIds);
   const setPaydayRolledBanner = useUIStore((s) => s.setPaydayRolledBanner);
   const [initError, setInitError] = useState<string | null>(null);
   const [bootstrapReady, setBootstrapReady] = useState(false);
@@ -150,12 +149,10 @@ export function useHomeState(): AppLiveState {
       ? queryData.templates
       : DEFAULT_TEMPLATES;
 
-  const visibleTransactions = (queryData?.allTransactions ?? [])
-    .filter((tx) => !pendingDeleteIds.includes(tx.id))
-    .sort((a, b) => {
-      if (b.date !== a.date) return b.date.localeCompare(a.date);
-      return b.occurredAt.localeCompare(a.occurredAt);
-    });
+  const visibleTransactions = (queryData?.allTransactions ?? []).sort((a, b) => {
+    if (b.date !== a.date) return b.date.localeCompare(a.date);
+    return b.occurredAt.localeCompare(a.occurredAt);
+  });
 
   const todayTransactions = visibleTransactions.filter((tx) => tx.date === currentToday);
   const categoryMap = new Map(categories.map((c) => [c.id, c]));

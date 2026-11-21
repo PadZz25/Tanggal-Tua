@@ -2,7 +2,10 @@ import { Plus, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
-import { deleteTransaction } from '../../data/repositories/transactions';
+import {
+  deleteTransaction,
+  restoreTransaction,
+} from '../../data/repositories/transactions';
 import { UI_STRINGS } from '../../domain/copy';
 import {
   formatHistoryDayHeader,
@@ -46,8 +49,6 @@ export function HistoryPage({ live }: HistoryPageProps) {
   const [filter, setFilter] = useState<FilterKind>('all');
   const openTransactionSheet = useUIStore((s) => s.openTransactionSheet);
   const showToast = useUIStore((s) => s.showToast);
-  const addPendingDelete = useUIStore((s) => s.addPendingDelete);
-  const removePendingDelete = useUIStore((s) => s.removePendingDelete);
 
   const kategoriParam = searchParams.get('kategori') || null;
   const dariParam = searchParams.get('dari');
@@ -80,8 +81,16 @@ export function HistoryPage({ live }: HistoryPageProps) {
 
   const filteredTransactions = useMemo(() => {
     return live.transactions.filter((tx) => {
-      if (kategoriParam && tx.categoryId !== kategoriParam) {
-        return false;
+      if (kategoriParam) {
+        const effectiveCategoryId =
+          tx.type === 'expense'
+            ? (tx.categoryId ?? 'cat-lainnya-expense')
+            : tx.type === 'income'
+              ? (tx.categoryId ?? 'cat-lainnya-income')
+              : tx.categoryId;
+        if (effectiveCategoryId !== kategoriParam) {
+          return false;
+        }
       }
       if (validDari && tx.date < validDari) {
         return false;
@@ -113,18 +122,14 @@ export function HistoryPage({ live }: HistoryPageProps) {
     return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filteredTransactions]);
 
-  const handleQuickDelete = (tx: Transaction) => {
-    addPendingDelete(tx.id);
+  const handleQuickDelete = async (tx: Transaction) => {
+    await deleteTransaction(tx.id);
     triggerHaptic(10);
 
     showToast({
       message: `Dihapus · ${tx.note}`,
-      onUndo: () => {
-        removePendingDelete(tx.id);
-      },
-      onExpire: async () => {
-        await deleteTransaction(tx.id);
-        removePendingDelete(tx.id);
+      onUndo: async () => {
+        await restoreTransaction(tx);
       },
     });
   };
@@ -243,7 +248,7 @@ export function HistoryPage({ live }: HistoryPageProps) {
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleQuickDelete(tx)}
+                      onClick={() => void handleQuickDelete(tx)}
                       aria-label={`Hapus transaksi ${tx.note}`}
                       className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:bg-[var(--border-soft)] hover:text-[var(--warm)]"
                     >

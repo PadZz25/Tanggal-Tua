@@ -22,7 +22,6 @@ describe('History & Settings pages (Milestone M5)', () => {
     });
     useUIStore.setState({
       toast: null,
-      pendingDeleteIds: [],
       isTransactionSheetOpen: false,
       editingTransactionId: null,
     });
@@ -67,14 +66,22 @@ describe('History & Settings pages (Milestone M5)', () => {
     await user.click(screen.getByRole('button', { name: 'Semua' }));
     expect(screen.getByText('Kopi pagi')).toBeInTheDocument();
 
-    // Quick delete Kopi pagi -> disappears immediately & shows Batalkan toast
+    // Quick delete Kopi pagi -> persists immediately to IndexedDB & shows Batalkan toast
     await user.click(screen.getByRole('button', { name: 'Hapus transaksi Kopi pagi' }));
-    expect(screen.queryByText('Kopi pagi')).not.toBeInTheDocument();
+    await waitFor(async () => {
+      expect(screen.queryByText('Kopi pagi')).not.toBeInTheDocument();
+      const remaining = await getAllTransactions();
+      expect(remaining.some((t) => t.note === 'Kopi pagi')).toBe(false);
+    });
     expect(screen.getByRole('status')).toHaveTextContent('Dihapus · Kopi pagi');
 
-    // Undo delete -> reappears
+    // Undo delete -> restores deleted transaction cleanly
     await user.click(screen.getByRole('button', { name: 'Batalkan' }));
-    expect(screen.getByText('Kopi pagi')).toBeInTheDocument();
+    await waitFor(async () => {
+      expect(screen.getByText('Kopi pagi')).toBeInTheDocument();
+      const restored = await getAllTransactions();
+      expect(restored.some((t) => t.note === 'Kopi pagi')).toBe(true);
+    });
   });
 
   it('creates a signed balance adjustment transaction in Pengaturan without overwriting openingBalance', async () => {
@@ -97,6 +104,25 @@ describe('History & Settings pages (Milestone M5)', () => {
       expect(txs[0].type).toBe('adjustment');
       expect(txs[0].amount).toBe(-45_000);
       expect(txs[0].note).toBe('Koreksi saldo');
+    });
+
+    // Simulate negative balance (-20_000) and target 1_000_000_000 -> delta exceeds MAX_AMOUNT -> shows friendly alert
+    await createTransaction({
+      type: 'expense',
+      amount: 820_000,
+      categoryId: 'cat-lainnya-expense',
+      note: 'Pengeluaran besar',
+      date: '2026-11-18',
+      source: 'form',
+    });
+
+    const inputAgain = screen.getByLabelText('Uang nyata yang kamu pegang sekarang');
+    await user.clear(inputAgain);
+    await user.type(inputAgain, '1000000000');
+    await user.click(screen.getByRole('button', { name: 'Sesuaikan' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/melebihi batas maksimal/i);
     });
   });
 

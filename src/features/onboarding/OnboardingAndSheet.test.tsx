@@ -14,7 +14,6 @@ describe('Onboarding & TransactionSheet (Milestone M4)', () => {
     await resetAllData('2026-11-18');
     useUIStore.setState({
       toast: null,
-      pendingDeleteIds: [],
       isTransactionSheetOpen: false,
       editingTransactionId: null,
     });
@@ -135,5 +134,53 @@ describe('Onboarding & TransactionSheet (Milestone M4)', () => {
       expect(settings.paydayDay).toBeNull();
       expect(settings.nextPayday).toBe('2026-11-21');
     });
+  });
+
+  it('keeps user edits intact in TransactionSheet when transactions prop updates in the background', async () => {
+    const user = userEvent.setup();
+    const initialTx = {
+      id: 'tx-edit-1',
+      type: 'expense' as const,
+      amount: 15_000,
+      categoryId: 'cat-makan',
+      note: 'Soto lama',
+      date: '2026-11-18',
+      occurredAt: '2026-11-18T10:00:00.000Z',
+      source: 'quick' as const,
+      createdAt: '2026-11-18T10:00:00.000Z',
+      updatedAt: '2026-11-18T10:00:00.000Z',
+    };
+
+    useUIStore.setState({
+      isTransactionSheetOpen: true,
+      editingTransactionId: 'tx-edit-1',
+      defaultTransactionType: 'expense',
+    });
+
+    const { rerender } = render(
+      <TransactionSheet
+        today="2026-11-18"
+        openingDate="2026-11-01"
+        categories={DEFAULT_CATEGORIES}
+        transactions={[initialTx]}
+      />
+    );
+
+    const noteInput = screen.getByLabelText(/Catatan/i);
+    await user.clear(noteInput);
+    await user.type(noteInput, 'Soto spesial');
+    expect(noteInput).toHaveValue('Soto spesial');
+
+    // Simulate useLiveQuery returning a fresh cloned transactions array
+    rerender(
+      <TransactionSheet
+        today="2026-11-18"
+        openingDate="2026-11-01"
+        categories={DEFAULT_CATEGORIES}
+        transactions={[{ ...initialTx }]}
+      />
+    );
+
+    expect(screen.getByLabelText(/Catatan/i)).toHaveValue('Soto spesial');
   });
 });

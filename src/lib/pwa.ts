@@ -80,6 +80,7 @@ export function initPwaSupport(): void {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e as BeforeInstallPromptEvent;
+    isStandalone = detectStandalone();
     updateSnapshot();
   });
 
@@ -155,15 +156,12 @@ export async function triggerNativePwaInstall(): Promise<
 > {
   if (!deferredPrompt) return 'unavailable';
   const promptEvent = deferredPrompt;
+  // Chrome allows prompt() once per event, so clear before awaiting user choice
+  deferredPrompt = null;
+  updateSnapshot();
   await promptEvent.prompt();
   const choice = await promptEvent.userChoice;
-  if (choice.outcome === 'accepted') {
-    deferredPrompt = null;
-    updateSnapshot();
-    return 'accepted';
-  }
-  updateSnapshot();
-  return 'dismissed';
+  return choice.outcome === 'accepted' ? 'accepted' : 'dismissed';
 }
 
 export function applyWaitingServiceWorker(): void {

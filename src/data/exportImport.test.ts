@@ -200,4 +200,27 @@ describe('Data layer & Export/Import (Milestone M2)', () => {
     expect(restoredWeekly.paydayDay).toBeNull();
     expect(restoredWeekly.nextPayday).toBe('2026-11-28');
   });
+
+  it('neutralizes CSV formula injection prefixes on string cells while keeping negative numbers unquoted', async () => {
+    await createTransaction({
+      type: 'expense',
+      amount: 12_000,
+      categoryId: 'cat-makan',
+      note: '=SUM(A1:A5)',
+      date: '2026-11-18',
+      source: 'form',
+    });
+    await createTransaction({
+      type: 'adjustment',
+      amount: -5_000,
+      categoryId: null,
+      note: '+koreksi manual',
+      date: '2026-11-18',
+      source: 'form',
+    });
+
+    const csv = await exportToCsv();
+    expect(csv).toContain(",'=SUM(A1:A5)");
+    expect(csv).toContain(",-5000,Koreksi saldo,'+koreksi manual");
+  });
 });

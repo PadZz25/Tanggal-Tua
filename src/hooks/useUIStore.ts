@@ -6,22 +6,18 @@ export interface ToastItem {
   message: string;
   undoLabel?: string;
   onUndo?: () => Promise<void> | void;
-  onExpire?: () => Promise<void> | void;
 }
 
 interface UIStoreState {
   toast: ToastItem | null;
-  pendingDeleteIds: string[];
   isTransactionSheetOpen: boolean;
   editingTransactionId: string | null;
   defaultTransactionType: TransactionType;
   mascotReactionTick: number;
   paydayRolledBanner: boolean;
   showToast: (item: Omit<ToastItem, 'id'>) => void;
-  dismissToast: (runExpire?: boolean) => Promise<void>;
+  dismissToast: () => void;
   triggerUndo: () => Promise<void>;
-  addPendingDelete: (id: string) => void;
-  removePendingDelete: (id: string) => void;
   openTransactionSheet: (options?: {
     transactionId?: string | null;
     defaultType?: TransactionType;
@@ -35,7 +31,6 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useUIStore = create<UIStoreState>((set, get) => ({
   toast: null,
-  pendingDeleteIds: [],
   isTransactionSheetOpen: false,
   editingTransactionId: null,
   defaultTransactionType: 'expense',
@@ -43,13 +38,9 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
   paydayRolledBanner: false,
 
   showToast: (item) => {
-    const prev = get().toast;
     if (toastTimer) {
       clearTimeout(toastTimer);
       toastTimer = null;
-    }
-    if (prev?.onExpire) {
-      void prev.onExpire();
     }
 
     const id = crypto.randomUUID();
@@ -58,21 +49,17 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
     toastTimer = setTimeout(() => {
       const current = get().toast;
       if (current && current.id === id) {
-        void get().dismissToast(true);
+        get().dismissToast();
       }
     }, 5_000);
   },
 
-  dismissToast: async (runExpire = true) => {
+  dismissToast: () => {
     if (toastTimer) {
       clearTimeout(toastTimer);
       toastTimer = null;
     }
-    const current = get().toast;
     set({ toast: null });
-    if (runExpire && current?.onExpire) {
-      await current.onExpire();
-    }
   },
 
   triggerUndo: async () => {
@@ -86,18 +73,6 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
       await current.onUndo();
     }
   },
-
-  addPendingDelete: (id) =>
-    set((state) => ({
-      pendingDeleteIds: state.pendingDeleteIds.includes(id)
-        ? state.pendingDeleteIds
-        : [...state.pendingDeleteIds, id],
-    })),
-
-  removePendingDelete: (id) =>
-    set((state) => ({
-      pendingDeleteIds: state.pendingDeleteIds.filter((item) => item !== id),
-    })),
 
   openTransactionSheet: (options) =>
     set({

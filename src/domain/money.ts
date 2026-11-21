@@ -35,7 +35,7 @@ export function formatShort(
 
   const prefix = withPrefix ? 'Rp ' : '';
 
-  if (abs >= 1_000_000) {
+  if (abs >= 999_950) {
     const millions = abs / 1_000_000;
     return `${sign}${prefix}${formatDecimalComma(millions, 2)}jt`;
   }
@@ -85,7 +85,11 @@ export function parseNominalInput(raw: string): number | null {
     return Math.round(num * mult);
   }
 
-  const digitsOnly = cleaned.replace(/\./g, '');
-  if (!/^\d+$/.test(digitsOnly)) return null;
-  return parseInt(digitsOnly, 10);
+  if (/^\d+$/.test(cleaned)) {
+    return parseInt(cleaned, 10);
+  }
+  if (/^\d{1,3}(?:\.\d{3})+$/.test(cleaned)) {
+    return parseInt(cleaned.replace(/\./g, ''), 10);
+  }
+  return null;
 }

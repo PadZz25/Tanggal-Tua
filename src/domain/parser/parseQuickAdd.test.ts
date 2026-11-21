@@ -369,5 +369,31 @@ describe('parseQuickAdd domain contract (Table 6.5 & expanded income priority)',
         expect(res.amount).toBe(75_000);
       }
     });
+
+    it('parses comma-grouped "rp 18,500" / "rp 1,500,000" accurately and rejects ambiguous "rp 18,5"', () => {
+      expect(parseQuickAdd('rp 18,500 kopi', ctx)).toEqual({
+        ok: true,
+        type: 'expense',
+        amount: 18_500,
+        note: 'Kopi',
+        categoryId: catIdByName('Jajan'),
+        date: TODAY,
+      });
+
+      expect(parseQuickAdd('rp 1,500,000 gaji', ctx)).toEqual({
+        ok: true,
+        type: 'income',
+        amount: 1_500_000,
+        note: 'Gaji',
+        categoryId: catIdByName('Gaji/Freelance', 'income'),
+        date: TODAY,
+      });
+
+      expect(parseQuickAdd('rp 18,5 kopi', ctx)).toEqual({
+        ok: false,
+        error: 'INVALID_AMOUNT',
+        hint: 'Nominalnya belum terbaca',
+      });
+    });
   });
 });

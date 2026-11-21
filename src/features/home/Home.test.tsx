@@ -18,7 +18,6 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
     await resetAllData('2026-11-18');
     useUIStore.setState({
       toast: null,
-      pendingDeleteIds: [],
       isTransactionSheetOpen: false,
       editingTransactionId: null,
       paydayRolledBanner: false,

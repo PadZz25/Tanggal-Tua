@@ -46,7 +46,7 @@ const DIRECTION_TO_PERSON_REGEX =
 function extractAmountCandidates(input: string): AmountCandidate[] {
   const candidates: AmountCandidate[] = [];
   const tokenRegex =
-    /(?:^|\s)(\+)?(?:(rp)\s*(\d+(?:\.\d{3})+|\d+(?:[.,]\d+)?)\s*(rb|ribu|k|jt|juta)?|(\d+(?:[.,]\d+)?)\s*(rb|ribu|k|jt|juta)|(\d+(?:\.\d{3})+|\d+))(?=\s|$)/gi;
+    /(?:^|\s)(\+)?(?:(rp)\s*(\d+(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(rb|ribu|k|jt|juta)?|(\d+(?:[.,]\d+)?)\s*(rb|ribu|k|jt|juta)|(\d+(?:\.\d{3})+|\d+))(?=\s|$)/gi;
 
   let match: RegExpExecArray | null;
   while ((match = tokenRegex.exec(input)) !== null) {
@@ -68,8 +68,14 @@ function extractAmountCandidates(input: string): AmountCandidate[] {
           hasPlusPrefix,
         });
       } else {
-        const digits = rawNum.replace(/\./g, '');
-        const numeric = parseInt(digits, 10);
+        let numeric = 0;
+        if (/^\d{1,3}(?:\.\d{3})+$/.test(rawNum)) {
+          numeric = parseInt(rawNum.replace(/\./g, ''), 10);
+        } else if (/^\d{1,3}(?:,\d{3})+$/.test(rawNum)) {
+          numeric = parseInt(rawNum.replace(/,/g, ''), 10);
+        } else if (/^\d+$/.test(rawNum)) {
+          numeric = parseInt(rawNum, 10);
+        }
         candidates.push({
           start: tokenStart,
           end: tokenEnd,

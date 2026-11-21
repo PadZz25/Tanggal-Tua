@@ -83,4 +83,34 @@ describe('PWA install prompt & button (Android 16 support)', () => {
     await user.click(screen.getByRole('button', { name: 'Muat ulang' }));
     expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('clears deferredPrompt after a dismissed prompt so second Instal tap opens install guide without error', async () => {
+    const user = userEvent.setup();
+    const promptSpy = vi.fn().mockResolvedValue(undefined);
+
+    const dismissedEvent = new Event('beforeinstallprompt');
+    Object.assign(dismissedEvent, {
+      platforms: ['web'],
+      prompt: promptSpy,
+      userChoice: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+    });
+
+    act(() => {
+      window.dispatchEvent(dismissedEvent);
+    });
+
+    render(<InstallPwaButton variant="compact" />);
+    const installBtn = screen.getByRole('button', {
+      name: /Instal aplikasi Tanggal Tua/i,
+    });
+
+    await user.click(installBtn);
+    expect(promptSpy).toHaveBeenCalledTimes(1);
+
+    await user.click(installBtn);
+    expect(promptSpy).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole('heading', { name: 'Instal Aplikasi Tanggal Tua' })
+    ).toBeInTheDocument();
+  });
 });

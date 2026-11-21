@@ -202,6 +202,11 @@ export function SettingsPage({ live }: SettingsPageProps) {
       return;
     }
 
+    if (Math.abs(parsed - live.homeState.currentBalance) > MAX_AMOUNT) {
+      setBalanceError('Selisih penyesuaian melebihi batas maksimal Rp 1.000.000.000');
+      return;
+    }
+
     setBalanceError(null);
     const tx = await createBalanceAdjustment({
       targetBalance: parsed,

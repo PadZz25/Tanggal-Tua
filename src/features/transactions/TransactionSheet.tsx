@@ -1,10 +1,11 @@
 import { Trash2 } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CategoryIcon } from '../../components/ui/CategoryIcon';
 import { Sheet } from '../../components/ui/Sheet';
 import {
   createTransaction,
   deleteTransaction,
+  restoreTransaction,
   updateTransaction,
 } from '../../data/repositories/transactions';
 import {
@@ -36,9 +37,8 @@ export function TransactionSheet({
   const defaultType = useUIStore((s) => s.defaultTransactionType);
   const closeSheet = useUIStore((s) => s.closeTransactionSheet);
   const showToast = useUIStore((s) => s.showToast);
-  const addPendingDelete = useUIStore((s) => s.addPendingDelete);
-  const removePendingDelete = useUIStore((s) => s.removePendingDelete);
   const triggerMascotReaction = useUIStore((s) => s.triggerMascotReaction);
+  const initializedSessionRef = useRef<string | null>(null);
 
   const editingTx = editingId
     ? transactions.find((t) => t.id === editingId) ?? null
@@ -54,7 +54,16 @@ export function TransactionSheet({
   const filteredCategories = categories.filter((c) => c.kind === txType);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      initializedSessionRef.current = null;
+      return;
+    }
+
+    const sessionKey = `${editingId ?? 'new'}:${defaultType}`;
+    if (initializedSessionRef.current === sessionKey) {
+      return;
+    }
+    initializedSessionRef.current = sessionKey;
     setErrorMsg(null);
 
     if (editingTx) {
@@ -75,7 +84,7 @@ export function TransactionSheet({
       setNote('');
       setDate(today);
     }
-  }, [isOpen, editingTx, defaultType, today]);
+  }, [isOpen, editingId, editingTx, defaultType, today]);
 
   const handleTypeSwitch = (nextType: 'expense' | 'income') => {
     setTxType(nextType);
@@ -160,21 +169,17 @@ export function TransactionSheet({
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!editingTx) return;
     const targetTx = editingTx;
-    addPendingDelete(targetTx.id);
+    await deleteTransaction(targetTx.id);
     triggerHaptic(10);
     closeSheet();
 
     showToast({
       message: `Dihapus · ${targetTx.note}`,
-      onUndo: () => {
-        removePendingDelete(targetTx.id);
-      },
-      onExpire: async () => {
-        await deleteTransaction(targetTx.id);
-        removePendingDelete(targetTx.id);
+      onUndo: async () => {
+        await restoreTransaction(targetTx);
       },
     });
   };
@@ -333,7 +338,7 @@ export function TransactionSheet({
           {editingTx ? (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => void handleDelete()}
               className="inline-flex min-h-[48px] items-center gap-1.5 rounded-[20px] border border-[var(--warm)] px-4 text-[14px] font-extrabold text-[var(--warm)] hover:opacity-90"
             >
               <Trash2 size={16} strokeWidth={2.2} aria-hidden="true" />

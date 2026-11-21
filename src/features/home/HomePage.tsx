@@ -1,13 +1,15 @@
-import { Plus } from 'lucide-react';
+import { Plus, Target } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Wordmark } from '../../components/brand/Wordmark';
 import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
+import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Sheet } from '../../components/ui/Sheet';
 import { createTemplate } from '../../data/repositories/templates';
-import { isValidAmount, parseNominalInput } from '../../domain/money';
+import { pickPrimaryActiveGoal } from '../../domain/goals';
+import { formatHeroShort, isValidAmount, parseNominalInput } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
-import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
+import { computeGoalSaved, GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { useUIStore } from '../../hooks/useUIStore';
 import { HeroCard } from './HeroCard';
@@ -34,6 +36,10 @@ export function HomePage({ live }: HomePageProps) {
   const [tplError, setTplError] = useState<string | null>(null);
 
   const expenseCategories = getSelectableCategories(live.categories, 'expense');
+  const primaryGoal = pickPrimaryActiveGoal(live.goals);
+  const primaryGoalSaved = primaryGoal
+    ? computeGoalSaved(live.transactions, primaryGoal.id)
+    : 0;
 
   const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +117,32 @@ export function HomePage({ live }: HomePageProps) {
           openTransactionSheet({ transactionId: tx.id });
         }}
       />
+
+      {primaryGoal && (
+        <Link
+          to={`/target/${primaryGoal.id}`}
+          data-testid="home-goal-row"
+          className="mt-3 block rounded-[20px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 transition-colors hover:border-[var(--primary)]"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Target size={16} strokeWidth={2.2} className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
+              <span className="truncate text-[14px] font-extrabold text-[var(--ink)]">
+                {primaryGoal.name}
+              </span>
+            </div>
+            <span className="tabular-nums shrink-0 text-[12px] font-bold text-[var(--muted)]">
+              {formatHeroShort(primaryGoalSaved)} dari{' '}
+              {formatHeroShort(primaryGoal.targetAmount)}
+            </span>
+          </div>
+          <div className="mt-2">
+            <ProgressBar
+              usedRatio={Math.min(1, primaryGoalSaved / primaryGoal.targetAmount)}
+            />
+          </div>
+        </Link>
+      )}
 
       <QuickAddBar
         today={live.today}

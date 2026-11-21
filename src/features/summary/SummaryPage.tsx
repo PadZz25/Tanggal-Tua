@@ -1,11 +1,14 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Target } from 'lucide-react';
 import { useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { LoadFailureScreen } from '../../components/layout/AppErrorBoundary';
+import { ProgressBar } from '../../components/ui/ProgressBar';
 import { UI_STRINGS } from '../../domain/copy';
+import { pickPrimaryActiveGoal } from '../../domain/goals';
 import { generateInsights } from '../../domain/insights';
-import { formatFull } from '../../domain/money';
+import { formatFull, formatHeroShort } from '../../domain/money';
+import { computeGoalSaved } from '../../domain/savings';
 import {
   canGoNextPeriod,
   canGoPreviousPeriod,
@@ -119,6 +122,11 @@ export function SummaryPage({ live }: SummaryPageProps) {
 
   const canPrev = canGoPreviousPeriod(range, live.settings.openingDate);
   const canNext = canGoNextPeriod(range, live.today);
+  const activeGoalsCount = live.goals.filter((g) => g.status === 'active').length;
+  const primaryGoal = pickPrimaryActiveGoal(live.goals);
+  const primaryGoalSaved = primaryGoal
+    ? computeGoalSaved(live.transactions, primaryGoal.id)
+    : 0;
 
   const handleSelectKind = (nextKind: PeriodKind) => {
     setSearchParams({
@@ -312,6 +320,60 @@ export function SummaryPage({ live }: SummaryPageProps) {
           />
         </>
       )}
+
+      <section
+        aria-labelledby="summary-goals-heading"
+        className="rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary-tint)] text-[var(--primary)]"
+            >
+              <Target size={16} strokeWidth={2.2} />
+            </span>
+            <h2
+              id="summary-goals-heading"
+              className="text-[15px] font-extrabold text-[var(--ink)]"
+            >
+              Target tabungan
+            </h2>
+          </div>
+          <Link
+            to="/target"
+            className="inline-flex min-h-[44px] items-center rounded-xl px-2 text-[13px] font-bold text-[var(--primary)] hover:underline"
+          >
+            {activeGoalsCount > 0 ? 'Kelola target' : 'Atur target'}
+          </Link>
+        </div>
+
+        {primaryGoal ? (
+          <Link to={`/target/${primaryGoal.id}`} className="mt-2.5 block space-y-2">
+            <div className="flex items-center justify-between gap-2 text-[13px]">
+              <span className="truncate font-bold text-[var(--ink)]">
+                {primaryGoal.name}
+              </span>
+              <span className="tabular-nums shrink-0 font-bold text-[var(--muted)]">
+                {formatHeroShort(primaryGoalSaved)} /{' '}
+                {formatHeroShort(primaryGoal.targetAmount)}
+              </span>
+            </div>
+            <ProgressBar
+              usedRatio={Math.min(1, primaryGoalSaved / primaryGoal.targetAmount)}
+            />
+            {activeGoalsCount > 1 && (
+              <p className="text-[12px] font-medium text-[var(--muted)]">
+                +{activeGoalsCount - 1} target aktif lainnya
+              </p>
+            )}
+          </Link>
+        ) : (
+          <p className="mt-2 text-[13px] font-medium text-[var(--muted)]">
+            Sisihkan pelan-pelan untuk tujuanmu tanpa mengganggu jatah hari ini.
+          </p>
+        )}
+      </section>
     </div>
   );
 }

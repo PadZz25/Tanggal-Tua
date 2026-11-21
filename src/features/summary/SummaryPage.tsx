@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { LoadFailureScreen } from '../../components/layout/AppErrorBoundary';
 import { UI_STRINGS } from '../../domain/copy';
+import { generateInsights } from '../../domain/insights';
 import { formatFull } from '../../domain/money';
 import {
   canGoNextPeriod,
@@ -17,6 +18,7 @@ import {
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { DailyExpenseChart } from './DailyExpenseChart';
+import { InsightsCard } from './InsightsCard';
 
 interface SummaryPageProps {
   live: AppLiveState;
@@ -71,6 +73,30 @@ export function SummaryPage({ live }: SummaryPageProps) {
   const comparison = useMemo(
     () => comparePeriods(currentSummary, previousSummary, live.today),
     [currentSummary, previousSummary, live.today]
+  );
+
+  const insights = useMemo(
+    () =>
+      generateInsights({
+        transactions: live.transactions,
+        currentSummary,
+        previousRange,
+        categoryMap: live.categoryMap,
+        today: live.today,
+        openingDate: live.settings.openingDate,
+        currentBalance: live.homeState.currentBalance,
+        daysLeft: live.homeState.daysLeft,
+      }),
+    [
+      live.transactions,
+      currentSummary,
+      previousRange,
+      live.categoryMap,
+      live.today,
+      live.settings.openingDate,
+      live.homeState.currentBalance,
+      live.homeState.daysLeft,
+    ]
   );
 
   if (live.error) {
@@ -269,6 +295,8 @@ export function SummaryPage({ live }: SummaryPageProps) {
               </p>
             )}
           </section>
+
+          <InsightsCard insights={insights} />
 
           <CategoryDonutChart
             range={range}

@@ -254,4 +254,57 @@ describe('SummaryPage & History query filters (0.3.0 Tugas 3)', () => {
     expect(screen.getByTestId('summary-total-expense')).toHaveTextContent('Rp 0');
     expect(screen.getByTestId('summary-saved')).toHaveTextContent('Ditabung Rp 130.000');
   });
+
+  it('renders rule-based Insight card with accessible disclosure "Kenapa muncul?"', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/ringkasan']}>
+        <SummaryPage
+          live={makeMockLive({
+            transactions: [
+              {
+                id: 'prev-1',
+                type: 'expense',
+                amount: 100_000,
+                categoryId: 'cat-jajan',
+                goalId: null,
+                note: 'Kopi lalu',
+                date: '2026-11-10',
+                occurredAt: '2026-11-10T09:00:00.000Z',
+                source: 'quick',
+                createdAt: '2026-11-10T09:00:00.000Z',
+                updatedAt: '2026-11-10T09:00:00.000Z',
+              },
+              {
+                id: 'cur-1',
+                type: 'expense',
+                amount: 120_000,
+                categoryId: 'cat-jajan',
+                goalId: null,
+                note: 'Kopi sekarang',
+                date: '2026-11-18',
+                occurredAt: '2026-11-18T09:00:00.000Z',
+                source: 'quick',
+                createdAt: '2026-11-18T09:00:00.000Z',
+                updatedAt: '2026-11-18T09:00:00.000Z',
+              },
+            ],
+          })}
+        />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByText('Jajan minggu ini naik 20% dari minggu lalu (Rp 120rb vs Rp 100rb)')
+    ).toBeInTheDocument();
+
+    const disclosureButtons = screen.getAllByRole('button', { name: 'Kenapa muncul?' });
+    expect(disclosureButtons[0]).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(disclosureButtons[0]);
+    expect(disclosureButtons[0]).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByText(/Pengeluaran Jajan pada .* sebesar Rp 120\.000/i)
+    ).toBeInTheDocument();
+  });
 });

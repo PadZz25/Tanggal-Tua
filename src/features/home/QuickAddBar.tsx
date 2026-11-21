@@ -163,7 +163,7 @@ export function QuickAddBar({
         <p
           id={hintId}
           role="alert"
-          className="mt-1.5 px-3 text-[12px] font-bold text-[var(--warm)]"
+          className="mt-1.5 px-3 text-[12px] font-bold text-[var(--warm-ink)]"
         >
           {errorHint}
         </p>

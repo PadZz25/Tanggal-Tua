@@ -43,6 +43,7 @@ import {
   MAX_AMOUNT,
   parseNominalInput,
 } from '../../domain/money';
+import { getSelectableCategories } from '../../domain/parser/keywords';
 import type {
   PaydayRepeat,
   PaydayWeekday,
@@ -55,21 +56,10 @@ import {
   normalizeThemePreference,
 } from '../../hooks/useTheme';
 import { useUIStore } from '../../hooks/useUIStore';
+import { downloadBlob } from '../../lib/download';
 
 interface SettingsPageProps {
   live: AppLiveState;
-}
-
-function downloadBlob(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
 }
 
 export function SettingsPage({ live }: SettingsPageProps) {
@@ -103,7 +93,7 @@ export function SettingsPage({ live }: SettingsPageProps) {
 
   const [resetStep, setResetStep] = useState<0 | 1>(0);
 
-  const expenseCategories = live.categories.filter((c) => c.kind === 'expense');
+  const expenseCategories = getSelectableCategories(live.categories, 'expense');
   const currentTheme = normalizeThemePreference(live.settings.theme);
 
   const THEME_OPTIONS = [
@@ -486,7 +476,7 @@ export function SettingsPage({ live }: SettingsPageProps) {
           </div>
 
           {balanceError && (
-            <p role="alert" className="text-[12px] font-bold text-[var(--warm)]">
+            <p role="alert" className="text-[12px] font-bold text-[var(--warm-ink)]">
               {balanceError}
             </p>
           )}
@@ -570,7 +560,7 @@ export function SettingsPage({ live }: SettingsPageProps) {
                   type="button"
                   onClick={() => void deleteTemplate(tpl.id)}
                   aria-label={`Hapus template ${tpl.label}`}
-                  className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--warm)]"
+                  className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--warm-ink)]"
                 >
                   <Trash2 size={16} aria-hidden="true" />
                 </button>
@@ -676,7 +666,7 @@ export function SettingsPage({ live }: SettingsPageProps) {
             </p>
           )}
           {importError && (
-            <p role="alert" className="mt-2 text-[12px] font-bold text-[var(--warm)]">
+            <p role="alert" className="mt-2 text-[12px] font-bold text-[var(--warm-ink)]">
               {importError}
             </p>
           )}
@@ -687,13 +677,13 @@ export function SettingsPage({ live }: SettingsPageProps) {
             <button
               type="button"
               onClick={() => setResetStep(1)}
-              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--warm)] px-4 text-[13px] font-extrabold text-[var(--warm)]"
+              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--warm-ink)] px-4 text-[13px] font-extrabold text-[var(--warm-ink)]"
             >
               <Trash2 size={16} strokeWidth={2.2} aria-hidden="true" />
               <span>Hapus semua data</span>
             </button>
           ) : (
-            <div className="rounded-[18px] border border-[var(--warm)] bg-[var(--bg)] p-3.5">
+            <div className="rounded-[18px] border border-[var(--warm-ink)] bg-[var(--bg)] p-3.5">
               <p className="text-[13px] font-extrabold text-[var(--ink)]">
                 {UI_STRINGS.deleteAllConfirm}
               </p>
@@ -808,7 +798,7 @@ export function SettingsPage({ live }: SettingsPageProps) {
           </div>
 
           {tplError && (
-            <p role="alert" className="text-[12px] font-bold text-[var(--warm)]">
+            <p role="alert" className="text-[12px] font-bold text-[var(--warm-ink)]">
               {tplError}
             </p>
           )}

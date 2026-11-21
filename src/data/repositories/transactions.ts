@@ -14,6 +14,7 @@ export async function createTransaction(input: {
   type: TransactionType;
   amount: number;
   categoryId: string | null;
+  goalId?: string | null;
   note: string;
   date: string;
   source: TransactionSource;
@@ -25,6 +26,7 @@ export async function createTransaction(input: {
     type: input.type,
     amount: Math.trunc(input.amount),
     categoryId: input.type === 'adjustment' ? null : input.categoryId,
+    goalId: input.goalId ?? null,
     note: input.note.trim().slice(0, 80) || (input.type === 'income' ? 'Pemasukan' : 'Pengeluaran'),
     date: input.date,
     occurredAt: input.occurredAt ?? nowIso,

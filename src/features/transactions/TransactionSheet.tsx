@@ -14,6 +14,7 @@ import {
   isValidAmount,
   parseNominalInput,
 } from '../../domain/money';
+import { getSelectableCategories } from '../../domain/parser/keywords';
 import type { Category, Transaction } from '../../domain/types';
 import { useUIStore } from '../../hooks/useUIStore';
 import { triggerHaptic } from '../../lib/haptics';
@@ -51,7 +52,7 @@ export function TransactionSheet({
   const [date, setDate] = useState(today);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const filteredCategories = categories.filter((c) => c.kind === txType);
+  const filteredCategories = getSelectableCategories(categories, txType);
 
   useEffect(() => {
     if (!isOpen) {
@@ -88,7 +89,7 @@ export function TransactionSheet({
 
   const handleTypeSwitch = (nextType: 'expense' | 'income') => {
     setTxType(nextType);
-    const matching = categories.filter((c) => c.kind === nextType);
+    const matching = getSelectableCategories(categories, nextType);
     if (matching.length > 0 && !matching.some((c) => c.id === categoryId)) {
       setCategoryId(matching[0].id);
     }
@@ -329,7 +330,7 @@ export function TransactionSheet({
         </div>
 
         {errorMsg && (
-          <p role="alert" className="text-[13px] font-bold text-[var(--warm)]">
+          <p role="alert" className="text-[13px] font-bold text-[var(--warm-ink)]">
             {errorMsg}
           </p>
         )}
@@ -339,7 +340,7 @@ export function TransactionSheet({
             <button
               type="button"
               onClick={() => void handleDelete()}
-              className="inline-flex min-h-[48px] items-center gap-1.5 rounded-[20px] border border-[var(--warm)] px-4 text-[14px] font-extrabold text-[var(--warm)] hover:opacity-90"
+              className="inline-flex min-h-[48px] items-center gap-1.5 rounded-[20px] border border-[var(--warm-ink)] px-4 text-[14px] font-extrabold text-[var(--warm-ink)] hover:opacity-90"
             >
               <Trash2 size={16} strokeWidth={2.2} aria-hidden="true" />
               <span>Hapus</span>

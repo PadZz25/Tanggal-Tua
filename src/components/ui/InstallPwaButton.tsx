@@ -122,8 +122,8 @@ export function InstallPwaButton({ variant = 'compact' }: InstallPwaButtonProps)
           )}
 
           {inAppBrowser && (
-            <div className="rounded-[18px] border border-[var(--warm)] bg-[var(--bg)] p-3.5">
-              <p className="text-[13px] font-extrabold text-[var(--warm)]">
+            <div className="rounded-[18px] border border-[var(--warm-ink)] bg-[var(--bg)] p-3.5">
+              <p className="text-[13px] font-extrabold text-[var(--warm-ink)]">
                 Terdeteksi Browser Bawaan Aplikasi (In-App Browser)
               </p>
               <p className="mt-1 text-[13px] font-medium text-[var(--ink)]">

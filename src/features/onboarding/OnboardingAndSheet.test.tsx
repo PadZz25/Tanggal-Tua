@@ -146,6 +146,7 @@ describe('Onboarding & TransactionSheet (Milestone M4)', () => {
       type: 'expense' as const,
       amount: 15_000,
       categoryId: 'cat-makan',
+      goalId: null,
       note: 'Soto lama',
       date: '2026-11-18',
       occurredAt: '2026-11-18T10:00:00.000Z',

@@ -52,6 +52,34 @@ export const WEAK_INCOME_KEYWORDS = [
   'dikasih',
 ] as const;
 
+export const SYSTEM_CATEGORY_SAVING_ID = 'cat-tabungan';
+export const SYSTEM_CATEGORY_WITHDRAW_ID = 'cat-tarik-tabungan';
+
+export const SYSTEM_CATEGORIES: Category[] = [
+  {
+    id: SYSTEM_CATEGORY_SAVING_ID,
+    kind: 'expense',
+    name: 'Tabungan',
+    icon: 'PiggyBank',
+    tone: 'kosan',
+    keywords: [],
+    order: 100,
+    isDefault: true,
+    isSystem: true,
+  },
+  {
+    id: SYSTEM_CATEGORY_WITHDRAW_ID,
+    kind: 'income',
+    name: 'Tarik tabungan',
+    icon: 'PiggyBank',
+    tone: 'transport',
+    keywords: [],
+    order: 101,
+    isDefault: true,
+    isSystem: true,
+  },
+];
+
 export const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'cat-makan',
@@ -73,6 +101,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
     order: 1,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-jajan',
@@ -93,6 +122,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
     order: 2,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-transport',
@@ -103,6 +133,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: ['parkir', 'bensin', 'ojol', 'ojek', 'angkot', 'bus', 'krl', 'tol'],
     order: 3,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-kosan',
@@ -113,6 +144,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: ['kos', 'kosan', 'sewa', 'listrik', 'air'],
     order: 4,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-paketan',
@@ -123,6 +155,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: ['pulsa', 'paketan', 'kuota', 'wifi', 'internet'],
     order: 5,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-kuliah',
@@ -133,6 +166,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: ['fotokopi', 'print', 'buku', 'ukt', 'spp', 'modul'],
     order: 6,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-belanja',
@@ -143,6 +177,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: ['belanja', 'indomaret', 'alfamart', 'skincare', 'baju'],
     order: 7,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-hiburan',
@@ -153,6 +188,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: ['nonton', 'bioskop', 'game', 'spotify', 'netflix', 'nongkrong'],
     order: 8,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-lainnya-expense',
@@ -163,6 +199,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: [],
     order: 9,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-kiriman-ortu',
@@ -173,6 +210,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: ['kiriman', 'uang saku', 'dari ortu', 'dikirimin', 'dikirim ortu'],
     order: 10,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-gaji-freelance',
@@ -194,6 +232,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
     order: 11,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-beasiswa',
@@ -204,6 +243,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: ['beasiswa'],
     order: 12,
     isDefault: true,
+    isSystem: false,
   },
   {
     id: 'cat-lainnya-income',
@@ -214,5 +254,18 @@ export const DEFAULT_CATEGORIES: Category[] = [
     keywords: [],
     order: 13,
     isDefault: true,
+    isSystem: false,
   },
 ];
+
+export const ALL_DEFAULT_CATEGORIES: Category[] = [
+  ...DEFAULT_CATEGORIES,
+  ...SYSTEM_CATEGORIES,
+];
+
+export function getSelectableCategories(
+  categories: readonly Category[],
+  kind: 'expense' | 'income'
+): Category[] {
+  return categories.filter((c) => c.kind === kind && !c.isSystem);
+}

@@ -15,6 +15,10 @@
   --coin-edge: #C98A1B;
   --coin-ink: #231C16;
   --warm: #9E3F27;
+  --warm-ink: #9E3F27;
+  --status-hampir: #8A5200;
+  --status-hampir-bg: #FEF0CC;
+  --status-habis-bg: #FDEAE4;
   --hero-bg: var(--primary);
   --hero-ink: #FFFFFF;
   --hero-muted: rgba(255, 255, 255, 0.85);
@@ -76,6 +80,10 @@
   --coin-edge: #C98A1B;
   --coin-ink: #231C16;
   --warm: #9E3F27;
+  --warm-ink: #F29B82;
+  --status-hampir: #F5C04D;
+  --status-hampir-bg: #3B2A12;
+  --status-habis-bg: #3D1F18;
   --hero-bg: rgba(154, 167, 255, 0.14);
   --hero-ink: #FFFFFF;
   --hero-muted: rgba(255, 255, 255, 0.85);

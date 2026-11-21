@@ -1,4 +1,7 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
+import { exportLegacyDatabaseBackup } from '../../data/db';
+import { today } from '../../domain/dates';
+import { downloadBlob } from '../../lib/download';
 import { resetApplicationCache } from '../../lib/pwa';
 import { Mascot } from '../brand/Mascot';
 
@@ -7,6 +10,33 @@ interface RecoveryScreenProps {
 }
 
 export function LoadFailureScreen({ message }: RecoveryScreenProps) {
+  const [backupFeedback, setBackupFeedback] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadLegacyBackup = async () => {
+    setIsExporting(true);
+    setBackupFeedback(null);
+    try {
+      const json = await exportLegacyDatabaseBackup();
+      if (!json) {
+        setBackupFeedback('Belum ditemukan data lama untuk diunduh.');
+        return;
+      }
+      downloadBlob(
+        json,
+        `tanggal-tua-backup-lama-${today()}.json`,
+        'application/json;charset=utf-8'
+      );
+      setBackupFeedback('Cadangan data lama berhasil diunduh.');
+    } catch {
+      setBackupFeedback(
+        'Database lama sedang terkunci oleh tab lain. Tutup tab lain lalu coba lagi.'
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleResetCache = async () => {
     await resetApplicationCache();
     window.location.reload();
@@ -21,6 +51,14 @@ export function LoadFailureScreen({ message }: RecoveryScreenProps) {
         Data catatanmu di penyimpanan lokal tetap aman dan tidak akan dihapus.
       </p>
       <div className="mt-2 flex w-full max-w-[320px] flex-col gap-2.5">
+        <button
+          type="button"
+          onClick={() => void handleDownloadLegacyBackup()}
+          disabled={isExporting}
+          className="min-h-[48px] w-full rounded-[22px] border border-[var(--primary)] bg-[var(--primary-tint)] px-5 text-[14px] font-extrabold text-[var(--primary)] hover:opacity-90"
+        >
+          {isExporting ? 'Menyiapkan cadangan...' : 'Unduh cadangan data lama'}
+        </button>
         <button
           type="button"
           onClick={() => window.location.reload()}
@@ -40,6 +78,11 @@ export function LoadFailureScreen({ message }: RecoveryScreenProps) {
           Reset cache aplikasi
         </button>
       </div>
+      {backupFeedback && (
+        <p role="status" className="text-[13px] font-semibold text-[var(--ink)]">
+          {backupFeedback}
+        </p>
+      )}
     </main>
   );
 }

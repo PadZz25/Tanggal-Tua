@@ -242,7 +242,7 @@ export function HistoryPage({ live }: HistoryPageProps) {
                       type="button"
                       onClick={() => void handleQuickDelete(tx)}
                       aria-label={`Hapus transaksi ${tx.note}`}
-                      className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:bg-[var(--border-soft)] hover:text-[var(--warm)]"
+                      className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:bg-[var(--border-soft)] hover:text-[var(--warm-ink)]"
                     >
                       <Trash2 size={17} strokeWidth={2.1} aria-hidden="true" />
                     </button>

@@ -8,9 +8,12 @@ import {
 import { sortTopTemplates } from '../data/repositories/templates';
 import { DEFAULT_TEMPLATES, ensureSeeded } from '../data/seed';
 import { computeBalances, getHomeState } from '../domain/allowance';
-import { DEFAULT_CATEGORIES } from '../domain/parser/keywords';
+import { ALL_DEFAULT_CATEGORIES } from '../domain/parser/keywords';
 import type {
+  Budget,
   Category,
+  DayMark,
+  Goal,
   HomeStateResult,
   Settings,
   Template,
@@ -26,24 +29,41 @@ export interface LoadedAppSnapshot {
   categories: Category[];
   templates: Template[];
   allTransactions: Transaction[];
+  goals: Goal[];
+  dayMarks: DayMark[];
+  budgets: Budget[];
   hasSettingsRow: boolean;
 }
 
 export async function loadAppSnapshot(currentToday: string): Promise<LoadedAppSnapshot> {
   await openDatabaseSafely();
 
-  const [rawSettings, rawCategories, rawTemplates, allTransactions] = await Promise.all([
+  const [
+    rawSettings,
+    rawCategories,
+    rawTemplates,
+    allTransactions,
+    goals,
+    dayMarks,
+    budgets,
+  ] = await Promise.all([
     db.settings.get('main'),
     db.categories.orderBy('order').toArray(),
     db.templates.orderBy('order').toArray(),
     db.transactions.toArray(),
+    db.goals.toArray(),
+    db.dayMarks.toArray(),
+    db.budgets.toArray(),
   ]);
 
   return {
     settings: mergeWithDefaultSettings(rawSettings, currentToday),
-    categories: rawCategories.length > 0 ? rawCategories : DEFAULT_CATEGORIES,
+    categories: rawCategories.length > 0 ? rawCategories : ALL_DEFAULT_CATEGORIES,
     templates: rawTemplates.length > 0 ? rawTemplates : DEFAULT_TEMPLATES,
     allTransactions,
+    goals,
+    dayMarks,
+    budgets,
     hasSettingsRow: rawSettings !== undefined,
   };
 }
@@ -59,6 +79,9 @@ export interface AppLiveState {
   topTemplates: Template[];
   transactions: Transaction[];
   todayTransactions: Transaction[];
+  goals: Goal[];
+  dayMarks: DayMark[];
+  budgets: Budget[];
   homeState: HomeStateResult;
 }
 
@@ -143,7 +166,7 @@ export function useHomeState(): AppLiveState {
   const categories =
     queryData?.categories && queryData.categories.length > 0
       ? queryData.categories
-      : DEFAULT_CATEGORIES;
+      : ALL_DEFAULT_CATEGORIES;
   const templates =
     queryData?.templates && queryData.templates.length > 0
       ? queryData.templates
@@ -184,6 +207,9 @@ export function useHomeState(): AppLiveState {
     topTemplates,
     transactions: visibleTransactions,
     todayTransactions,
+    goals: queryData?.goals ?? [],
+    dayMarks: queryData?.dayMarks ?? [],
+    budgets: queryData?.budgets ?? [],
     homeState,
   };
 }

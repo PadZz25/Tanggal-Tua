@@ -39,7 +39,7 @@ export function AppShell({
   return (
     <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-[var(--bg)] text-[var(--ink)]">
       <PwaUpdateBanner />
-      <div
+      <main
         className="flex flex-1 flex-col px-5"
         style={{
           paddingTop: 'env(safe-area-inset-top, 0px)',
@@ -47,7 +47,7 @@ export function AppShell({
         }}
       >
         {children}
-      </div>
+      </main>
       <Toast />
       {showNav && <BottomNav />}
     </div>

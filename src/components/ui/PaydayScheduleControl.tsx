@@ -213,7 +213,7 @@ export function PaydayScheduleControl({
             </p>
           )}
           {dateError && (
-            <p role="alert" className="mt-1.5 px-1 text-[13px] font-bold text-[var(--warm)]">
+            <p role="alert" className="mt-1.5 px-1 text-[13px] font-bold text-[var(--warm-ink)]">
               {dateError}
             </p>
           )}

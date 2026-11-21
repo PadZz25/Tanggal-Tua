@@ -6,6 +6,7 @@ import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
 import { Sheet } from '../../components/ui/Sheet';
 import { createTemplate } from '../../data/repositories/templates';
 import { isValidAmount, parseNominalInput } from '../../domain/money';
+import { getSelectableCategories } from '../../domain/parser/keywords';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { useUIStore } from '../../hooks/useUIStore';
 import { HeroCard } from './HeroCard';
@@ -27,7 +28,7 @@ export function HomePage({ live }: HomePageProps) {
   const [tplCategoryId, setTplCategoryId] = useState('cat-jajan');
   const [tplError, setTplError] = useState<string | null>(null);
 
-  const expenseCategories = live.categories.filter((c) => c.kind === 'expense');
+  const expenseCategories = getSelectableCategories(live.categories, 'expense');
 
   const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +59,7 @@ export function HomePage({ live }: HomePageProps) {
   return (
     <>
       <header className="flex h-16 items-center justify-between gap-2">
-        <Wordmark mood={live.homeState.mood} />
+        <Wordmark mood={live.homeState.mood} asHeading />
         <div className="flex items-center gap-2">
           <InstallPwaButton variant="compact" />
           <button
@@ -174,7 +175,7 @@ export function HomePage({ live }: HomePageProps) {
           </div>
 
           {tplError && (
-            <p role="alert" className="text-[13px] font-bold text-[var(--warm)]">
+            <p role="alert" className="text-[13px] font-bold text-[var(--warm-ink)]">
               {tplError}
             </p>
           )}

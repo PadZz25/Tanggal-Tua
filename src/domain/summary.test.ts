@@ -15,6 +15,7 @@ function makeTx(
   return {
     id: crypto.randomUUID(),
     categoryId: overrides.type === 'adjustment' ? null : 'cat-makan',
+    goalId: null,
     note: 'Test',
     occurredAt: `${overrides.date}T10:00:00.000Z`,
     source: 'quick',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CATEGORIES } from './keywords';
+import { ALL_DEFAULT_CATEGORIES, DEFAULT_CATEGORIES } from './keywords';
 import { parseQuickAdd } from './parseQuickAdd';
 
 const TODAY = '2026-11-18';
@@ -394,6 +394,17 @@ describe('parseQuickAdd domain contract (Table 6.5 & expanded income priority)',
         error: 'INVALID_AMOUNT',
         hint: 'Nominalnya belum terbaca',
       });
+    });
+
+    it('excludes system categories (Tabungan / Tarik tabungan) from parser category matching', () => {
+      const res = parseQuickAdd('tabungan 50rb', {
+        today: TODAY,
+        categories: ALL_DEFAULT_CATEGORIES,
+      });
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.categoryId).toBe(catIdByName('Lainnya', 'expense'));
+      }
     });
   });
 });

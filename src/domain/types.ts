@@ -7,6 +7,7 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   categoryId: string | null;
+  goalId: string | null;
   note: string;
   date: string;
   occurredAt: string;
@@ -26,6 +27,7 @@ export interface Category {
   keywords: string[];
   order: number;
   isDefault: boolean;
+  isSystem: boolean;
 }
 
 export interface Template {
@@ -35,6 +37,39 @@ export interface Template {
   categoryId: string;
   order: number;
   usageCount: number;
+}
+
+export type GoalStatus = 'active' | 'completed' | 'archived';
+
+export type GoalMilestone = 0 | 25 | 50 | 75 | 100;
+
+export interface Goal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  startDate: string;
+  deadline: string;
+  status: GoalStatus;
+  lastMilestone: GoalMilestone;
+  createdAt: string;
+}
+
+export type DayMarkKind = 'no_spend';
+
+export interface DayMark {
+  date: string;
+  kind: DayMarkKind;
+  createdAt: string;
+}
+
+export type BudgetPeriod = 'week' | 'month';
+
+export interface Budget {
+  categoryId: string;
+  period: BudgetPeriod;
+  amount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -56,6 +91,11 @@ export interface Settings {
   tanggalTuaThreshold: number;
   theme: ThemePreference;
   lastExportAt: string | null;
+  reminderEnabled: boolean;
+  reminderTime: string;
+  lastCelebratedStreak: number;
+  backupSnoozeUntil: string | null;
+  iosHintDismissed: boolean;
 }
 
 export interface Person {

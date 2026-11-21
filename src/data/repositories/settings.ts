@@ -85,6 +85,28 @@ export function normalizeSettings(
       Number.isFinite(row.tanggalTuaThreshold)
         ? row.tanggalTuaThreshold
         : defaults.tanggalTuaThreshold,
+    reminderEnabled:
+      typeof row.reminderEnabled === 'boolean'
+        ? row.reminderEnabled
+        : defaults.reminderEnabled,
+    reminderTime:
+      typeof row.reminderTime === 'string' && /^\d{2}:\d{2}$/.test(row.reminderTime)
+        ? row.reminderTime
+        : defaults.reminderTime,
+    lastCelebratedStreak:
+      typeof row.lastCelebratedStreak === 'number' &&
+      Number.isInteger(row.lastCelebratedStreak) &&
+      row.lastCelebratedStreak >= 0
+        ? row.lastCelebratedStreak
+        : defaults.lastCelebratedStreak,
+    backupSnoozeUntil:
+      typeof row.backupSnoozeUntil === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.backupSnoozeUntil)
+        ? row.backupSnoozeUntil
+        : null,
+    iosHintDismissed:
+      typeof row.iosHintDismissed === 'boolean'
+        ? row.iosHintDismissed
+        : defaults.iosHintDismissed,
   };
 }
 
@@ -168,7 +190,17 @@ export async function checkAndRollPayday(
 export async function resetAllData(currentToday: string = today()): Promise<void> {
   await db.transaction(
     'rw',
-    [db.transactions, db.templates, db.categories, db.settings, db.people, db.debts],
+    [
+      db.transactions,
+      db.templates,
+      db.categories,
+      db.settings,
+      db.people,
+      db.debts,
+      db.goals,
+      db.dayMarks,
+      db.budgets,
+    ],
     async () => {
       await db.transactions.clear();
       await db.templates.clear();
@@ -176,6 +208,9 @@ export async function resetAllData(currentToday: string = today()): Promise<void
       await db.settings.clear();
       await db.people.clear();
       await db.debts.clear();
+      await db.goals.clear();
+      await db.dayMarks.clear();
+      await db.budgets.clear();
     }
   );
   await ensureSeeded(currentToday);

@@ -156,7 +156,7 @@ function matchCategory(
   categories: Category[]
 ): string {
   const normalized = normalizeForMatching(rawText);
-  const relevantCategories = categories.filter((c) => c.kind === type);
+  const relevantCategories = categories.filter((c) => c.kind === type && !c.isSystem);
 
   let bestCategoryId: string | null = null;
   let earliestIndex = Number.POSITIVE_INFINITY;

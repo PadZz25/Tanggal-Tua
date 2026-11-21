@@ -498,6 +498,9 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
       await user.click(within(resurfaced).getByRole('button', { name: 'Unduh cadangan' }));
       await waitFor(() => {
         expect(screen.queryByTestId('home-backup-banner')).not.toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent(
+          'Cadangan JSON berhasil diunduh'
+        );
       });
     } finally {
       uaSpy.mockRestore();

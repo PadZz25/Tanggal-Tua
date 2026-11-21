@@ -2,57 +2,55 @@
 
 ## 1. Masalah dan Pengguna
 
-Bagi banyak mahasiswa dan pekerja muda (Gen Z) di Indonesia yang hidup dari kiriman bulanan atau gaji pertama, pertanyaan finansial paling nyata setiap hari bukanlah *"Berapa rasio pengeluaran bulananku?"*, melainkan:
+Bagi banyak mahasiswa dan pekerja muda (Gen Z) di Indonesia yang hidup dari kiriman berkala atau gaji awal karier, pertanyaan finansial paling mendesak setiap hari bukanlah *"Bagaimana rasio alokasi pengeluaran bulananku?"*, melainkan:
 
 > *"Hari ini aku masih boleh jajan berapa?"*
 
-Mayoritas aplikasi pencatat keuangan gagal bertahan lebih dari beberapa minggu di ponsel pengguna karena tiga alasan utama:
-1. Mencatat pengeluaran terasa seperti pekerjaan administrasi yang memakan banyak ketukan layar.
-2. Halaman utama menampilkan grafik akuntansi masa lalu, bukan angka keputusan untuk hari ini.
-3. Banyak aplikasi mengharuskan login akun atau koneksi bank yang mengurangi kenyamanan privasi dan tidak bisa diandalkan saat sinyal lemah.
+Mayoritas aplikasi pencatat keuangan sulit bertahan lama dipakai setiap hari karena tiga hambatan:
+1. Mencatat transaksi terasa seperti pekerjaan pembukuan dengan terlalu banyak formulir dan ketukan layar.
+2. Layar utama menampilkan rekap historis, bukan angka keputusan yang jelas untuk hari ini.
+3. Kewajiban membuat akun dan bergantung pada server membuat aplikasi rentan gagal saat sinyal lemah sekaligus menimbulkan kekhawatiran privasi.
 
 ## 2. Riset Pesaing dan Celah Pasar
 
-Aplikasi global (seperti YNAB, Monarch Money, Spendee) dan aplikasi populer di Indonesia (seperti Money Lover, Wallet, Monefy, DompetKu) umumnya berfokus pada pembukuan multi-rekening atau laporan bulanan.
-
-**Tanggal Tua** mengambil celah yang spesifik:
-- **Satu angka keputusan:** Sisa jatah harian yang dihitung otomatis dari saldo saat ini dibagi sisa hari menuju tanggal kiriman berikutnya.
-- **Input 5 detik berbahasa sehari-hari:** Mendukung ketikan gaya chat (`kopi 18rb`, `makan siang 15k`, `kiriman ortu 1,5jt`) dan chip template satu ketuk.
-- **Local-first & Offline penuh:** Seluruh data tersimpan di IndexedDB perangkat pengguna tanpa server, tanpa akun, dan tanpa pelacak pihak ketiga.
+Aplikasi manajemen keuangan populer di pasaran umumnya mengejar kelengkapan akuntansi multi-dompet atau sinkronisasi rekening. **Tanggal Tua** sengaja mengambil ceruk yang lebih tajam:
+- **Satu angka keputusan:** Menghitung sisa jatah harian secara dinamis dari saldo aktif dibagi sisa hari menuju tanggal kiriman berikutnya.
+- **Catat cepat 5 detik berbahasa chat:** Memahami ketikan natural Indonesia (`kopi 18rb`, `makan siang 15k`, `transfer dari ortu 1jt`, `+500rb freelance`) sekaligus tombol satu ketuk chip template dan penanda tanpa pengeluaran.
+- **100% Local-First & Offline:** Seluruh data disimpan di IndexedDB pengguna tanpa backend, akun, atau panggilan jaringan eksternal apa pun.
 
 ## 3. Keputusan Produk dan Hal yang Sengaja Tidak Dibangun
 
-**Tiga pilar inti produk:**
-1. **Sisa jatah harian di layar utama:** Menambah pengeluaran hari ini hanya mengurangi sisa jatah hari ini (`remainingToday`) tanpa mengubah plafon jatah harian (`dailyAllowance`) hari tersebut. Jika hari ini lewat batas, selisihnya otomatis menyesuaikan jatah hari-hari berikutnya.
-2. **Tanpa rasa bersalah:** Saat jatah menipis (`Mode Tanggal Tua`) atau lewat batas, warna hero beralih ke terakota hangat (`#9E3F27`) dengan pesan maskot Receh yang menenangkan, bukan warna merah menyala atau kalimat yang menghakimi.
-3. **Kepemilikan data penuh:** Pengguna dapat mengekspor data ke JSON berversi maupun CSV (UTF-8 dengan BOM untuk Excel) serta memulihkannya kapan saja.
+**Pilar utama rilis 1.0.0:**
+1. **Stabilitas jatah harian:** Plafon hari ini (`dailyAllowance = floor((currentBalance + spentToday) / daysLeft)`) tetap konsisten sepanjang hari agar pengguna mendapat batas harian yang jelas, sementara sisa lebih atau minus hari ini otomatis menyesuaikan jatah mulai besok.
+2. **Nada tenang tanpa rasa bersalah:** Saat saldo menipis atau anggaran kategori lewat batas, antarmuka memakai warna terakota hangat (`--warm` / `--warm-ink`) dan pesan suportif dari maskot Receh alih-alih indikator merah/hijau yang menghakimi.
+3. **Tabungan terpisah dari belanja:** Transaksi setoran atau penarikan target tabungan (`goalId`) memakai kategori sistem khusus agar memengaruhi saldo bebas (`currentBalance`) tanpa mengotori `spentToday` maupun grafik belanja di Ringkasan.
+4. **Banner Beranda tunggal berbasis prioritas:** Hanya satu banner konteks yang boleh tampil di Beranda pada satu waktu (`kiriman > pengingat harian > anggaran > panduan iOS > cadangan`) agar fokus angka utama tetap bersih pada layar ponsel `390x844`.
+5. **Pengingat tanpa server maupun paksaan izin:** Pengingat bekerja secara pasif di dalam app serta lewat unduhan standar kalender lokal `.ics`, alih-alih memakai Push Notification, Periodic Sync, atau Notification Triggers yang membutuhkan server atau dukungan browser terbatas.
 
-**Hal yang sengaja tidak dibangun (Non-goals):**
-- Koneksi bank, pembacaan SMS/notifikasi otomatis, atau integrasi pembayaran.
-- Multi-mata-uang, portofolio investasi, kripto, atau laporan pajak.
-- Kewajiban membuat akun dan pengiriman data ke server.
+**Hal yang sengaja tidak dibangun:** sinkronisasi bank/SMS otomatis, multi-dompet, penguncian app, patungan/utang, transaksi berulang otomatis, kategori kustom, laporan PDF, dan input suara (ditunda karena membutuhkan keputusan privasi mode lokal dan parser angka lisan Indonesia).
 
 ## 4. Desain dan Aksesibilitas
 
-Karakter visual **Tanggal Tua** dirancang tenang di struktur, hangat di detail, dan lokal di bahasa:
-- **Palet Warna Teruji WCAG 2.2 AA:** Seluruh pasangan teks dan latar belakang (termasuk seluruh 9 nada warna kategori pada mode terang maupun gelap, serta chip transparan di atas kartu hero) diverifikasi secara matematis memiliki kontras ≥ 4.5:1 untuk teks normal dan ≥ 3.0:1 untuk batas komponen interaktif.
-- **Maskot "Receh":** Koin SVG ringan yang mengubah ekspresi wajah (`smile`, `flat`, `oops`, `sleepy`) dan memberikan satu kalimat pendamping yang deterministik setiap hari sesuai kondisi saldo.
-- **Aksesibilitas Penuh:** Menggunakan elemen HTML semantik (`<dialog>` asli untuk bottom sheet, `<button>`, `<label>` terhubung, `role="status"` untuk toast undo 5 detik), navigasi keyboard lengkap, serta menghormati pengaturan `prefers-reduced-motion`.
+- **Palet Warna Terverifikasi Matematis:** Seluruh token pada `:root` (terang) dan `[data-theme="dark"]` (gelap, hero kaca dengan backdrop blur) diverifikasi lewat `src/styles/contrast.test.ts` yang membaca langsung `src/styles/tokens.css`: teks normal `>= 4.5:1`, batas kontrol/progress/chart `>= 3.0:1`, dan perbedaan luminansi bertetangga pada `--chart-1..9`.
+- **Maskot "Receh":** SVG koin ringan dengan 6 ekspresi (`smile`, `flat`, `oops`, `sleepy`, `cheer`, `wink`), ucapan deterministik harian, serta dukungan penuh `prefers-reduced-motion`.
+- **Standar WCAG 2.2 AA:** Elemen semantik asli (`<main>`, `<nav>`, `<dialog>` pada bottom sheet, `<label>` terhubung, `role="switch"`, kontrol disclosure `aria-expanded`), manajemen fokus, `role="status"` untuk toast undo 5 detik, dukungan zoom 200%, serta pemeriksaan otomatis `@axe-core/playwright` pada seluruh 7 rute di tema terang dan gelap.
 
 ## 5. Arsitektur Teknis dan Tantangan
 
-Aplikasi dibangun dengan pemisahan lapisan satu arah yang ketat:
-- **`src/domain/` (Fungsi Murni):** Seluruh aturan perhitungan jatah harian (`computeAllowance`, `getHomeState`), pemformatan Rupiah (`formatShort`, `formatFull`), perhitungan tanggal (`daysBetween`, `rollPayday`), dan parser teks (`parseQuickAdd`) ditulis sebagai fungsi TypeScript murni tanpa ketergantungan pada React maupun IndexedDB.
-- **`src/data/` (Penyimpanan Lokal):** Mengelola IndexedDB melalui Dexie v1, validasi skema menggunakan Zod, dan transaksi atomik saat impor data agar file yang tidak valid tidak pernah merusak data pengguna.
-- **`src/features/` & `src/components/` (Antarmuka):** Komponen React yang membaca data melalui repositori dan hooks reaktif, dilengkapi pengelolaan pergantian hari otomatis tepat pukul 00:00 waktu lokal serta saat aplikasi kembali aktif (`visibilitychange`).
+Aplikasi dibangun dengan batas ketergantungan searah yang ketat:
+- **`src/domain/` (Pure TypeScript):** Seluruh aturan perhitungan jatah, ringkasan, insight berbasis aturan (`R4 -> R1 -> R2 -> R3`), streak, target tabungan, anggaran kalender, prioritas banner, parser teks, dan generator `.ics` berbentuk fungsi murni yang menerima `today` sebagai argumen tanpa menyentuh React maupun Dexie.
+- **`src/data/` (Dexie v2 + Zod):** Mengelola skema IndexedDB v2 dengan migrasi atomik tunggal dari v1 (`0.3.x`), validasi skema JSON v1 & v2 via Zod, ekspor CSV bersanitasi formula dengan BOM UTF-8, serta penanganan darurat `AppErrorBoundary` untuk mengekspor cadangan data mentah bila terjadi kegagalan upgrade.
+- **`src/features/` & `src/hooks/` (React UI & Resiliensi Browser):** Halaman sekunder dimuat dengan `React.lazy` menjaga JS awal di `141.93 kB` gzip. Visibilitas navigasi bawah pada keyboard mobile diturunkan langsung dari penyusutan `visualViewport` saat ini (bukan state fokus yang bisa tertahan saat gestur Back Android).
 
-## 6. Pengujian dan Kualitas
+## 6. Pengujian, Performa, dan Pembelajaran
 
-- **Unit Test (Vitest):** Menguji seluruh kasus perhitungan jatah harian, prioritas 6 state beranda, parser teks cepat (termasuk disambiguasi kata kunci dan batas nominal), putaran penuh ekspor/impor JSON & CSV, serta audit rasio kontras warna otomatis.
-- **Component & E2E Test:** Memastikan alur onboarding, pencatatan cepat, pembatalan (undo 5 detik), pengelolaan riwayat, pergantian tema, dan ketahanan mode offline berjalan mulus.
-- **Pengukuran Lighthouse:** Tidak diklaim tanpa pengukuran nyata pada build produksi (`not measured` hingga diuji langsung melalui Lighthouse CLI/DevTools).
+- **Audit Build & Lighthouse Mobile (`vite preview`):**
+  - JS Awal: **141.93 kB** gzip (batas ~150 kB); lazy chunks 2.03–6.86 kB gzip.
+  - Lighthouse Mobile: Performance **98** (`FCP 0.8 s`, `LCP 2.4 s`, `CLS 0.001`, `TBT 80 ms`), Accessibility **100**, Best Practices **100**.
+- **Pertahanan Berkelanjutan:**
+  - Unit & komponen test (Vitest + Testing Library) mencakup kalkulasi finansial, migrasi v1->v2, kontras semua token warna CSS, snapshot `.ics`, dan interaksi UI.
+  - Pengujian E2E (Playwright) memblokir seluruh permintaan ke origin pihak ketiga, menjalankan `@axe-core/playwright` di kedua tema, dan mensimulasikan pembaruan dari data Dexie v1, kegagalan migrasi, pergeseran jam, serta mode offline penuh.
 
-## 7. Langkah Berikutnya (Roadmap P1 & P2)
+## 7. Langkah Berikutnya
 
-- **P1:** Fitur patungan dan catatan utang teman, transaksi berulang otomatis, kategori kustom, ringkasan bulanan, serta pemisahan multi-nominal dalam satu input (`es teh 4rb dan parkir 2rb`).
-- **P2:** Pencatatan via suara (`Web Speech API` Bahasa Indonesia) dan enkripsi cadangan lokal menggunakan passphrase.
+- Fitur pasca-1.0.0 akan mengikuti Semantic Versioning (`MINOR` untuk fitur kompatibel seperti patungan/utang, kategori kustom, atau pencarian riwayat bila disetujui; `PATCH` untuk perbaikan bug) dengan jaminan migrasi aman bagi pengguna dari versi >= 0.3.

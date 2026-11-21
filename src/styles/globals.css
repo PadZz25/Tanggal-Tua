@@ -14,6 +14,7 @@
     background-color: var(--bg);
     color: var(--ink);
     accent-color: var(--primary);
+    scroll-padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
     -webkit-text-size-adjust: 100%;
   }
 

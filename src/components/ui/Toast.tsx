@@ -11,7 +11,8 @@ export function Toast() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-x-0 bottom-[134px] z-40 mx-auto flex max-w-[440px] px-5 pointer-events-none"
+      style={{ bottom: 'calc(134px + env(safe-area-inset-bottom, 0px))' }}
+      className="fixed inset-x-0 z-40 mx-auto flex max-w-[440px] px-5 pointer-events-none"
     >
       <div className="pointer-events-auto flex w-full items-center justify-between gap-3 rounded-[20px] border border-[var(--border-control)] bg-[var(--ink)] px-4 py-2 text-[var(--bg)] shadow-lg transition-all duration-200">
         <span className="text-[14px] font-semibold leading-snug">{toast.message}</span>

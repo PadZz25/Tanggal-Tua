@@ -9,6 +9,7 @@ import { formatShort } from '../../domain/money';
 import { parseQuickAdd } from '../../domain/parser/parseQuickAdd';
 import type { Category } from '../../domain/types';
 import { useUIStore } from '../../hooks/useUIStore';
+import { useViewportKeyboard } from '../../hooks/useViewportKeyboard';
 import { triggerHaptic } from '../../lib/haptics';
 import { requestPersistentStorage } from '../../lib/pwa';
 
@@ -32,8 +33,7 @@ export function QuickAddBar({
   const hintId = useId();
 
   const showToast = useUIStore((s) => s.showToast);
-  const isQuickInputFocused = useUIStore((s) => s.isQuickInputFocused);
-  const setQuickInputFocused = useUIStore((s) => s.setQuickInputFocused);
+  const { isKeyboardOpen, keyboardInsetPx } = useViewportKeyboard();
   const triggerMascotReaction = useUIStore((s) => s.triggerMascotReaction);
 
   const livePreview = useMemo(() => {
@@ -73,6 +73,7 @@ export function QuickAddBar({
     triggerHaptic(10);
     triggerMascotReaction();
     void requestPersistentStorage();
+    inputRef.current?.blur();
 
     const formattedDelta =
       parsed.type === 'income'
@@ -94,11 +95,16 @@ export function QuickAddBar({
     }
   };
 
+  const dockBottomStyle = isKeyboardOpen
+    ? keyboardInsetPx > 0
+      ? `${keyboardInsetPx + 8}px`
+      : 'calc(8px + env(safe-area-inset-bottom, 0px))'
+    : 'calc(72px + env(safe-area-inset-bottom, 0px))';
+
   return (
     <div
-      className={`fixed inset-x-0 z-30 mx-auto max-w-[480px] bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pt-2 transition-all duration-200 ${
-        isQuickInputFocused ? 'max-sm:bottom-2 sm:bottom-[72px]' : 'bottom-[72px]'
-      }`}
+      style={{ bottom: dockBottomStyle }}
+      className="fixed inset-x-0 z-30 mx-auto max-w-[480px] bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pt-2 transition-all duration-200"
     >
       {livePreview && !errorHint && (
         <div className="mb-1.5 flex items-center">
@@ -117,7 +123,7 @@ export function QuickAddBar({
         onSubmit={(e) => void handleSubmit(e)}
         aria-label="Form catat cepat"
         noValidate
-        className="flex h-[56px] items-center gap-2 rounded-[28px] border border-[var(--border-control)] bg-[var(--surface)] pl-4 pr-1.5 shadow-sm focus-within:ring-2 focus-within:ring-[var(--primary)]"
+        className="flex min-h-[56px] items-center gap-2 rounded-[28px] border border-[var(--border-control)] bg-[var(--surface)] pl-4 pr-1.5 shadow-sm focus-within:ring-2 focus-within:ring-[var(--primary)]"
       >
         <label htmlFor={inputId} className="visually-hidden">
           {UI_STRINGS.quickInputLabel}
@@ -131,8 +137,6 @@ export function QuickAddBar({
             setText(e.target.value);
             if (errorHint) setErrorHint(null);
           }}
-          onFocus={() => setQuickInputFocused(true)}
-          onBlur={() => setQuickInputFocused(false)}
           onKeyDown={handleKeyDown}
           placeholder={UI_STRINGS.quickInputPlaceholder}
           enterKeyHint="send"

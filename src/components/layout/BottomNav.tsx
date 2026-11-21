@@ -1,6 +1,6 @@
 import { Clock, Home, PieChart, Settings } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
-import { useUIStore } from '../../hooks/useUIStore';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useViewportKeyboard } from '../../hooks/useViewportKeyboard';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Beranda', icon: Home },
@@ -10,13 +10,17 @@ const NAV_ITEMS = [
 ] as const;
 
 export function BottomNav() {
-  const isQuickInputFocused = useUIStore((s) => s.isQuickInputFocused);
+  const { pathname } = useLocation();
+  const { isKeyboardOpen } = useViewportKeyboard(pathname);
 
   return (
     <nav
       aria-label="Navigasi utama"
+      data-nav-hidden={isKeyboardOpen ? 'true' : 'false'}
       className={`fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border)] bg-[var(--surface)] transition-transform duration-200 ${
-        isQuickInputFocused ? 'max-sm:translate-y-full' : 'translate-y-0'
+        isKeyboardOpen
+          ? 'invisible pointer-events-none translate-y-full'
+          : 'visible translate-y-0'
       }`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >

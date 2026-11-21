@@ -39,7 +39,15 @@ export function AppShell({
   return (
     <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-[var(--bg)] text-[var(--ink)]">
       <PwaUpdateBanner />
-      <div className="flex flex-1 flex-col px-5 pb-[148px]">{children}</div>
+      <div
+        className="flex flex-1 flex-col px-5"
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'calc(148px + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        {children}
+      </div>
       <Toast />
       {showNav && <BottomNav />}
     </div>

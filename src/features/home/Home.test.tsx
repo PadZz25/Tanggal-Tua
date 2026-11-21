@@ -21,7 +21,6 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
       pendingDeleteIds: [],
       isTransactionSheetOpen: false,
       editingTransactionId: null,
-      isQuickInputFocused: false,
       paydayRolledBanner: false,
     });
   });
@@ -264,5 +263,28 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
       const txs = await getAllTransactions();
       expect(txs).toHaveLength(0);
     });
+  });
+
+  it('keeps BottomNav visible when QuickAddBar input is focused without viewport shrink', async () => {
+    const user = userEvent.setup();
+    await completeOnboarding({
+      openingBalance: 845_000,
+      openingDate: '2026-11-18',
+      nextPayday: '2026-12-01',
+      paydayDay: 1,
+      theme: 'light',
+    });
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    const nav = await screen.findByRole('navigation', { name: 'Navigasi utama' });
+    const input = screen.getByPlaceholderText('Ketik: kopi 18rb');
+
+    await user.click(input);
+    expect(document.activeElement).toBe(input);
+    expect(nav).toHaveAttribute('data-nav-hidden', 'false');
+    expect(nav).not.toHaveClass('translate-y-full');
+    expect(nav).not.toHaveClass('invisible');
   });
 });

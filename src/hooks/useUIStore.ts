@@ -15,7 +15,6 @@ interface UIStoreState {
   isTransactionSheetOpen: boolean;
   editingTransactionId: string | null;
   defaultTransactionType: TransactionType;
-  isQuickInputFocused: boolean;
   mascotReactionTick: number;
   paydayRolledBanner: boolean;
   showToast: (item: Omit<ToastItem, 'id'>) => void;
@@ -28,7 +27,6 @@ interface UIStoreState {
     defaultType?: TransactionType;
   }) => void;
   closeTransactionSheet: () => void;
-  setQuickInputFocused: (focused: boolean) => void;
   triggerMascotReaction: () => void;
   setPaydayRolledBanner: (visible: boolean) => void;
 }
@@ -41,7 +39,6 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
   isTransactionSheetOpen: false,
   editingTransactionId: null,
   defaultTransactionType: 'expense',
-  isQuickInputFocused: false,
   mascotReactionTick: 0,
   paydayRolledBanner: false,
 
@@ -114,8 +111,6 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
       isTransactionSheetOpen: false,
       editingTransactionId: null,
     }),
-
-  setQuickInputFocused: (focused) => set({ isQuickInputFocused: focused }),
 
   triggerMascotReaction: () =>
     set((state) => ({ mascotReactionTick: state.mascotReactionTick + 1 })),

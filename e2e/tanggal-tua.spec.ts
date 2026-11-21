@@ -192,4 +192,46 @@ test.describe('Tanggal Tua E2E Flows (0.3.0 Tugas 5)', () => {
     await page.getByRole('link', { name: 'Beranda' }).click();
     await expect(page.getByTestId('hero-total-balance')).toContainText('Rp 815.000');
   });
+
+  test('0.3.1 Tugas 1: BottomNav stays visible on focus without shrink and recovers when keyboard closes without blur', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.__TANGGAL_TUA_TODAY__ = '2026-11-18';
+    });
+
+    await completeInitialOnboarding(page);
+
+    const nav = page.getByRole('navigation', { name: 'Navigasi utama' });
+    const navElement = page.locator('nav[aria-label="Navigasi utama"]');
+    const quickInput = page.getByPlaceholder('Ketik: kopi 18rb');
+
+    await expect(nav).toBeVisible();
+    await quickInput.click();
+    await expect(quickInput).toBeFocused();
+    await expect(nav).toBeVisible();
+
+    // Simulate soft keyboard opening (~344px) while input stays focused
+    await page.setViewportSize({ width: 390, height: 500 });
+    await expect(navElement).toHaveAttribute('data-nav-hidden', 'true');
+    await expect(nav).not.toBeVisible();
+
+    const inputBox = await quickInput.boundingBox();
+    expect(inputBox).not.toBeNull();
+    expect(inputBox!.y + inputBox!.height).toBeLessThanOrEqual(500);
+
+    // Simulate Android Back closing keyboard WITHOUT firing blur (input remains activeElement)
+    await page.setViewportSize({ width: 390, height: 844 });
+    const isStillFocused = await page.evaluate(
+      () => document.activeElement?.getAttribute('placeholder') === 'Ketik: kopi 18rb'
+    );
+    expect(isStillFocused).toBe(true);
+    await expect(navElement).toHaveAttribute('data-nav-hidden', 'false');
+    await expect(nav).toBeVisible();
+
+    // Saving a note keeps BottomNav visible and dock back above BottomNav
+    await quickInput.fill('kopi 18rb');
+    await page.getByRole('button', { name: 'Simpan catatan cepat' }).click();
+    await expect(nav).toBeVisible();
+  });
 });

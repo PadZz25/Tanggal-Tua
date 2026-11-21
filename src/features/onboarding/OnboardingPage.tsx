@@ -3,16 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { Wordmark } from '../../components/brand/Wordmark';
 import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
+import { PaydayScheduleControl } from '../../components/ui/PaydayScheduleControl';
 import { completeOnboarding } from '../../data/repositories/settings';
 import { computeAllowance } from '../../domain/allowance';
-import { addDays, daysBetween, defaultNextPayday, parseDateParts } from '../../domain/dates';
+import {
+  daysBetween,
+  defaultNextPayday,
+  getIsoWeekday,
+  getNextWeeklyPayday,
+  parseDateParts,
+} from '../../domain/dates';
 import {
   formatFull,
   formatHeroShort,
   isValidAmount,
   parseNominalInput,
 } from '../../domain/money';
-import type { ThemePreference } from '../../domain/types';
+import type { PaydayRepeat, PaydayWeekday, ThemePreference } from '../../domain/types';
 import { applyThemeToDocument } from '../../hooks/useTheme';
 
 interface OnboardingPageProps {
@@ -38,15 +45,19 @@ export function OnboardingPage({
   const [balanceError, setBalanceError] = useState<string | null>(null);
 
   const [nextPayday, setNextPayday] = useState(() => defaultNextPayday(today));
-  const [repeatMonthly, setRepeatMonthly] = useState(true);
+  const [paydayRepeat, setPaydayRepeat] = useState<PaydayRepeat>('monthly');
+  const [paydayWeekday, setPaydayWeekday] = useState<PaydayWeekday>(() =>
+    getIsoWeekday(today)
+  );
   const [dateError, setDateError] = useState<string | null>(null);
 
   const [theme, setTheme] = useState<ThemePreference>(initialTheme);
   const [isSaving, setIsSaving] = useState(false);
 
   const parsedBalance = parseNominalInput(balanceInput);
-  const minPayday = addDays(today, 1);
-  const daysLeft = Math.max(1, daysBetween(today, nextPayday));
+  const effectivePayday =
+    paydayRepeat === 'weekly' ? getNextWeeklyPayday(today, paydayWeekday) : nextPayday;
+  const daysLeft = Math.max(1, daysBetween(today, effectivePayday));
 
   const previewAllowance = computeAllowance({
     currentBalance: parsedBalance && isValidAmount(parsedBalance) ? parsedBalance : 0,
@@ -64,11 +75,30 @@ export function OnboardingPage({
     setStep(2);
   };
 
+  const handleRepeatChange = (nextMode: PaydayRepeat) => {
+    setPaydayRepeat(nextMode);
+    setDateError(null);
+    if (nextMode === 'weekly') {
+      setNextPayday(getNextWeeklyPayday(today, paydayWeekday));
+    } else if (!nextPayday || daysBetween(today, nextPayday) <= 0) {
+      setNextPayday(defaultNextPayday(today));
+    }
+  };
+
+  const handleWeekdayChange = (day: PaydayWeekday) => {
+    setPaydayWeekday(day);
+    setNextPayday(getNextWeeklyPayday(today, day));
+    setDateError(null);
+  };
+
   const handleStep2Submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!nextPayday || daysBetween(today, nextPayday) <= 0) {
+    if (paydayRepeat !== 'weekly' && (!nextPayday || daysBetween(today, nextPayday) <= 0)) {
       setDateError('Pilih tanggal kiriman setelah hari ini');
       return;
+    }
+    if (paydayRepeat === 'weekly') {
+      setNextPayday(getNextWeeklyPayday(today, paydayWeekday));
     }
     setDateError(null);
     setStep(3);
@@ -82,12 +112,16 @@ export function OnboardingPage({
   const handleFinish = async () => {
     if (!parsedBalance || !isValidAmount(parsedBalance) || isSaving) return;
     setIsSaving(true);
-    const paydayDay = repeatMonthly ? parseDateParts(nextPayday).day : null;
+    const finalPayday =
+      paydayRepeat === 'weekly' ? getNextWeeklyPayday(today, paydayWeekday) : nextPayday;
+    const paydayDay = paydayRepeat === 'monthly' ? parseDateParts(finalPayday).day : null;
     await completeOnboarding({
       openingBalance: parsedBalance,
       openingDate: today,
-      nextPayday,
+      nextPayday: finalPayday,
+      paydayRepeat,
       paydayDay,
+      paydayWeekday: paydayRepeat === 'weekly' ? paydayWeekday : null,
       theme,
     });
     navigate('/', { replace: true });
@@ -218,52 +252,21 @@ export function OnboardingPage({
               </p>
             </div>
 
-            <div>
-              <label
-                htmlFor="onboarding-payday"
-                className="mb-1.5 block text-[13px] font-bold text-[var(--ink)]"
-              >
-                Tanggal kiriman berikutnya
-              </label>
-              <input
-                id="onboarding-payday"
-                type="date"
-                min={minPayday}
-                value={nextPayday}
-                onChange={(e) => {
-                  setNextPayday(e.target.value);
-                  if (dateError) setDateError(null);
-                }}
-                required
-                className="min-h-[54px] w-full rounded-[20px] border border-[var(--border-control)] bg-[var(--surface)] px-4 text-[16px] font-bold text-[var(--ink)]"
-              />
-              {daysBetween(today, nextPayday) > 0 && (
-                <p className="mt-1.5 px-1 text-[13px] font-bold text-[var(--primary)]">
-                  {daysBetween(today, nextPayday)} hari lagi dari hari ini
-                </p>
-              )}
-              {dateError && (
-                <p role="alert" className="mt-1.5 px-1 text-[13px] font-bold text-[var(--warm)]">
-                  {dateError}
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 rounded-[18px] border border-[var(--border)] bg-[var(--surface)] p-3.5">
-              <input
-                id="onboarding-repeat"
-                type="checkbox"
-                checked={repeatMonthly}
-                onChange={(e) => setRepeatMonthly(e.target.checked)}
-                className="h-5 w-5 rounded"
-              />
-              <label
-                htmlFor="onboarding-repeat"
-                className="flex-1 text-[14px] font-bold text-[var(--ink)]"
-              >
-                Ulangi tiap bulan pada tanggal yang sama
-              </label>
-            </div>
+            <PaydayScheduleControl
+              today={today}
+              paydayRepeat={paydayRepeat}
+              paydayWeekday={paydayWeekday}
+              nextPayday={nextPayday}
+              dateInputId="onboarding-payday"
+              dateLabel="Tanggal kiriman berikutnya"
+              dateError={dateError}
+              onRepeatChange={handleRepeatChange}
+              onWeekdayChange={handleWeekdayChange}
+              onDateChange={(val) => {
+                setNextPayday(val);
+                if (dateError) setDateError(null);
+              }}
+            />
 
             <div className="flex gap-3 pt-4">
               <button

@@ -39,6 +39,10 @@ export interface Template {
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+export type PaydayRepeat = 'none' | 'monthly' | 'weekly';
+
+export type PaydayWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 export interface Settings {
   id: 'main';
   schemaVersion: number;
@@ -46,7 +50,9 @@ export interface Settings {
   openingBalance: number;
   openingDate: string;
   nextPayday: string;
+  paydayRepeat: PaydayRepeat;
   paydayDay: number | null;
+  paydayWeekday: PaydayWeekday | null;
   tanggalTuaThreshold: number;
   theme: ThemePreference;
   lastExportAt: string | null;

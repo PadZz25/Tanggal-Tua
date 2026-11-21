@@ -125,4 +125,79 @@ describe('Data layer & Export/Import (Milestone M2)', () => {
     expect(csv).toContain('date,type,amount,category,note');
     expect(csv).toContain('2026-11-18,expense,18000,Jajan,"Kopi, roti"');
   });
+
+  it('imports legacy v1 JSON exports without paydayRepeat/paydayWeekday and round-trips weekly schedule', async () => {
+    const legacyMonthlyPayload = JSON.stringify({
+      app: 'tanggal-tua',
+      schemaVersion: 1,
+      exportedAt: '2026-11-18T10:00:00.000Z',
+      settings: {
+        id: 'main',
+        schemaVersion: 1,
+        hasOnboarded: true,
+        openingBalance: 500_000,
+        openingDate: '2026-11-18',
+        nextPayday: '2026-12-01',
+        paydayDay: 1,
+        tanggalTuaThreshold: 30_000,
+        theme: 'light',
+        lastExportAt: null,
+      },
+      categories: [],
+      templates: [],
+      transactions: [],
+    });
+
+    await importFromJson(legacyMonthlyPayload, 'replace');
+    const monthlySettings = await getSettings('2026-11-18');
+    expect(monthlySettings.paydayRepeat).toBe('monthly');
+    expect(monthlySettings.paydayDay).toBe(1);
+    expect(monthlySettings.paydayWeekday).toBeNull();
+
+    const legacyNonePayload = JSON.stringify({
+      app: 'tanggal-tua',
+      schemaVersion: 1,
+      exportedAt: '2026-11-18T10:00:00.000Z',
+      settings: {
+        id: 'main',
+        schemaVersion: 1,
+        hasOnboarded: true,
+        openingBalance: 500_000,
+        openingDate: '2026-11-18',
+        nextPayday: '2026-12-01',
+        paydayDay: null,
+        tanggalTuaThreshold: 30_000,
+        theme: 'system',
+        lastExportAt: null,
+      },
+      categories: [],
+      templates: [],
+      transactions: [],
+    });
+
+    await importFromJson(legacyNonePayload, 'replace');
+    const noneSettings = await getSettings('2026-11-18');
+    expect(noneSettings.paydayRepeat).toBe('none');
+    expect(noneSettings.paydayWeekday).toBeNull();
+
+    // Weekly round-trip export & import
+    await completeOnboarding({
+      openingBalance: 210_000,
+      openingDate: '2026-11-21',
+      nextPayday: '2026-11-28',
+      paydayRepeat: 'weekly',
+      paydayDay: null,
+      paydayWeekday: 6,
+      theme: 'light',
+    });
+
+    const weeklyJson = await exportToJson('2026-11-21T10:00:00.000Z');
+    await resetAllData('2026-11-21');
+    await importFromJson(weeklyJson, 'replace');
+    const restoredWeekly = await getSettings('2026-11-21');
+    expect(restoredWeekly.paydayRepeat).toBe('weekly');
+    expect(restoredWeekly.paydayWeekday).toBe(6);
+    expect(restoredWeekly.paydayDay).toBeNull();
+    expect(restoredWeekly.nextPayday).toBe('2026-11-28');
+  });
 });

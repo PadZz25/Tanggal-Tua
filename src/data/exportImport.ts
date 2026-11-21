@@ -1,6 +1,10 @@
 import { CURRENT_SCHEMA_VERSION, db } from './db';
 import { getAllCategories } from './repositories/categories';
-import { getSettings, updateSettings } from './repositories/settings';
+import {
+  getSettings,
+  normalizeSettings,
+  updateSettings,
+} from './repositories/settings';
 import { getAllTemplates } from './repositories/templates';
 import { getAllTransactions } from './repositories/transactions';
 import { ExportPayloadSchema, type ExportPayload } from './schemas';
@@ -104,7 +108,7 @@ export async function importFromJson(
         await db.categories.clear();
         await db.settings.clear();
 
-        await db.settings.put({ ...payload.settings, id: 'main' });
+        await db.settings.put(normalizeSettings({ ...payload.settings, id: 'main' }));
         if (payload.categories.length > 0) {
           await db.categories.bulkPut(payload.categories);
         }
@@ -118,7 +122,7 @@ export async function importFromJson(
       } else {
         const currentSettings = await getSettings();
         if (!currentSettings.hasOnboarded && payload.settings.hasOnboarded) {
-          await db.settings.put({ ...payload.settings, id: 'main' });
+          await db.settings.put(normalizeSettings({ ...payload.settings, id: 'main' }));
         }
 
         const existingCategoryIds = new Set(

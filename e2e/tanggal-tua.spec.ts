@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-async function completeInitialOnboarding(page: import('@playwright/test').Page) {
+async function completeInitialOnboarding(
+  page: import('@playwright/test').Page,
+  expectedAllowance = 'Rp 65rb'
+) {
   await page.goto('/');
   await expect(
     page.getByRole('heading', { name: 'Uang yang kamu pegang sekarang berapa?' })
@@ -9,9 +12,13 @@ async function completeInitialOnboarding(page: import('@playwright/test').Page) 
   await page.getByRole('button', { name: 'Lanjut' }).click();
   await page.getByRole('button', { name: 'Lanjut' }).click();
   await page.getByRole('button', { name: 'Lihat jatah harianku' }).click();
-  await expect(page.getByTestId('onboarding-final-allowance')).toHaveText('Rp 65rb');
+  await expect(page.getByTestId('onboarding-final-allowance')).toHaveText(
+    expectedAllowance
+  );
   await page.getByRole('button', { name: 'Mulai' }).click();
-  await expect(page.getByTestId('hero-allowance-amount')).toHaveText('Rp 65rb');
+  await expect(page.getByTestId('hero-allowance-amount')).toHaveText(
+    expectedAllowance
+  );
 }
 
 test.describe('Tanggal Tua E2E Flows (0.3.0 Tugas 5)', () => {
@@ -233,5 +240,90 @@ test.describe('Tanggal Tua E2E Flows (0.3.0 Tugas 5)', () => {
     await quickInput.fill('kopi 18rb');
     await page.getByRole('button', { name: 'Simpan catatan cepat' }).click();
     await expect(nav).toBeVisible();
+  });
+
+  test('0.3.1 Tugas 2: weekly payday persists across reload, rolls +7 on payday without auto-income, works offline, and survives SW update reload', async ({
+    page,
+    context,
+  }) => {
+    await page.addInitScript(() => {
+      const mocked = sessionStorage.getItem('__mock_today');
+      window.__TANGGAL_TUA_TODAY__ = mocked || '2026-11-21';
+    });
+
+    await completeInitialOnboarding(page, 'Rp 84,5rb');
+
+    await page.getByRole('link', { name: 'Pengaturan' }).click();
+    await expect(page.getByRole('heading', { name: 'Pengaturan' })).toBeVisible();
+
+    await page.getByRole('radio', { name: 'Tiap minggu' }).click();
+    await page.getByRole('radio', { name: 'Sabtu' }).click();
+    await expect(page.getByTestId('payday-weekly-preview')).toHaveText(
+      'Kiriman berikutnya: Sabtu, 28 Nov (7 hari lagi)'
+    );
+
+    // Reload -> weekly option and weekday stay selected
+    await page.reload();
+    await expect(page.getByRole('radio', { name: 'Tiap minggu' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+      { timeout: 3_000 }
+    );
+    await expect(page.getByRole('radio', { name: 'Sabtu' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+
+    // Go to Beranda -> Hero chip shows next Saturday & 7 days left
+    await page.getByRole('link', { name: 'Beranda' }).click();
+    await expect(page.getByText('Kiriman 28 Nov · 7 hari lagi')).toBeVisible();
+
+    // Wait for SW registration before offline test
+    await page.evaluate(async () => {
+      if ('serviceWorker' in navigator) {
+        await navigator.serviceWorker.ready;
+      }
+    });
+
+    // Advance clock to payday (2026-11-28) -> banner appears, payday shifts +7 to 5 Des, NO auto income
+    await page.evaluate(() => sessionStorage.setItem('__mock_today', '2026-11-28'));
+    await page.reload();
+    await expect(page.getByText('Kiriman sudah masuk? Catat')).toBeVisible({
+      timeout: 3_000,
+    });
+    await expect(page.getByText('Kiriman 5 Des · 7 hari lagi')).toBeVisible();
+    await expect(page.getByTestId('hero-total-balance')).toContainText('Rp 845.000');
+
+    // Works completely offline
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByText('Kiriman 5 Des · 7 hari lagi')).toBeVisible({
+      timeout: 3_000,
+    });
+    await page.getByRole('link', { name: 'Pengaturan' }).click();
+    await expect(page.getByRole('radio', { name: 'Tiap minggu' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    await expect(page.getByRole('radio', { name: 'Sabtu' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    await context.setOffline(false);
+
+    // Simulate PWA update banner ("Versi baru tersedia · Muat ulang") -> reload keeps data intact
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('tanggal-tua-sw-update-waiting'));
+    });
+    await expect(page.getByText('Versi baru tersedia · Muat ulang')).toBeVisible();
+    await page.getByRole('button', { name: 'Muat ulang' }).click();
+
+    await expect(page.getByRole('radio', { name: 'Tiap minggu' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+      { timeout: 3_000 }
+    );
+    await page.getByRole('link', { name: 'Beranda' }).click();
+    await expect(page.getByTestId('hero-total-balance')).toContainText('Rp 845.000');
   });
 });

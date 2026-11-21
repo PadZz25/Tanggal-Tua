@@ -8,10 +8,11 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
+import { PaydayScheduleControl } from '../../components/ui/PaydayScheduleControl';
 import { Sheet } from '../../components/ui/Sheet';
 import {
   exportToCsv,
@@ -28,7 +29,13 @@ import {
 } from '../../data/repositories/templates';
 import { createBalanceAdjustment } from '../../data/repositories/transactions';
 import { UI_STRINGS } from '../../domain/copy';
-import { addDays, daysBetween, parseDateParts } from '../../domain/dates';
+import {
+  daysBetween,
+  defaultNextPayday,
+  getIsoWeekday,
+  getNextWeeklyPayday,
+  parseDateParts,
+} from '../../domain/dates';
 import {
   formatFull,
   formatShort,
@@ -36,7 +43,12 @@ import {
   MAX_AMOUNT,
   parseNominalInput,
 } from '../../domain/money';
-import type { Template, ThemePreference } from '../../domain/types';
+import type {
+  PaydayRepeat,
+  PaydayWeekday,
+  Template,
+  ThemePreference,
+} from '../../domain/types';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import {
   applyThemeToDocument,
@@ -64,10 +76,16 @@ export function SettingsPage({ live }: SettingsPageProps) {
   const navigate = useNavigate();
   const showToast = useUIStore((s) => s.showToast);
 
-  const [nextPayday, setNextPayday] = useState(live.settings.nextPayday);
-  const [repeatMonthly, setRepeatMonthly] = useState(
-    live.settings.paydayDay !== null
-  );
+  const [dateDraft, setDateDraft] = useState(live.settings.nextPayday);
+  const [dateError, setDateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDateDraft(live.settings.nextPayday);
+  }, [live.settings.nextPayday]);
+
+  const currentRepeat = live.settings.paydayRepeat;
+  const currentWeekday: PaydayWeekday =
+    live.settings.paydayWeekday ?? getIsoWeekday(live.today);
 
   const [targetBalanceInput, setTargetBalanceInput] = useState('');
   const [balanceError, setBalanceError] = useState<string | null>(null);
@@ -117,15 +135,63 @@ export function SettingsPage({ live }: SettingsPageProps) {
     }
   };
 
+  const handleRepeatChange = async (mode: PaydayRepeat) => {
+    setDateError(null);
+    if (mode === 'weekly') {
+      const targetWeekday = live.settings.paydayWeekday ?? getIsoWeekday(live.today);
+      const computedNext = getNextWeeklyPayday(live.today, targetWeekday);
+      await updateSettings({
+        paydayRepeat: 'weekly',
+        paydayWeekday: targetWeekday,
+        paydayDay: null,
+        nextPayday: computedNext,
+      });
+      showToast({ message: UI_STRINGS.paydayScheduleUpdated });
+      return;
+    }
+
+    const candidateDate =
+      daysBetween(live.today, dateDraft) > 0
+        ? dateDraft
+        : defaultNextPayday(live.today);
+    await updateSettings({
+      paydayRepeat: mode,
+      paydayDay: mode === 'monthly' ? parseDateParts(candidateDate).day : null,
+      paydayWeekday: null,
+      nextPayday: candidateDate,
+    });
+    showToast({ message: UI_STRINGS.paydayScheduleUpdated });
+  };
+
+  const handleWeekdayChange = async (weekday: PaydayWeekday) => {
+    setDateError(null);
+    const computedNext = getNextWeeklyPayday(live.today, weekday);
+    await updateSettings({
+      paydayRepeat: 'weekly',
+      paydayWeekday: weekday,
+      paydayDay: null,
+      nextPayday: computedNext,
+    });
+    showToast({ message: UI_STRINGS.paydayScheduleUpdated });
+  };
+
   const handleSavePayday = async (e: FormEvent) => {
     e.preventDefault();
-    if (!nextPayday || daysBetween(live.today, nextPayday) <= 0) {
+    if (!dateDraft || daysBetween(live.today, dateDraft) <= 0) {
+      setDateError('Pilih tanggal kiriman setelah hari ini');
       showToast({ message: 'Pilih tanggal kiriman setelah hari ini' });
       return;
     }
-    const paydayDay = repeatMonthly ? parseDateParts(nextPayday).day : null;
-    await updateSettings({ nextPayday, paydayDay });
-    showToast({ message: 'Jadwal kiriman diperbarui' });
+    setDateError(null);
+    const paydayDay =
+      currentRepeat === 'monthly' ? parseDateParts(dateDraft).day : null;
+    await updateSettings({
+      nextPayday: dateDraft,
+      paydayRepeat: currentRepeat,
+      paydayDay,
+      paydayWeekday: null,
+    });
+    showToast({ message: UI_STRINGS.paydayScheduleUpdated });
   };
 
   const handleAdjustBalance = async (e: FormEvent) => {
@@ -327,50 +393,35 @@ export function SettingsPage({ live }: SettingsPageProps) {
         >
           Jadwal Kiriman Berikutnya
         </h2>
-        <form onSubmit={(e) => void handleSavePayday(e)} className="mt-3 space-y-3">
-          <div>
-            <label
-              htmlFor="settings-payday-input"
-              className="mb-1 block text-[13px] font-bold text-[var(--ink)]"
-            >
-              Tanggal kiriman atau gajian
-            </label>
-            <input
-              id="settings-payday-input"
-              type="date"
-              min={addDays(live.today, 1)}
-              value={nextPayday}
-              onChange={(e) => setNextPayday(e.target.value)}
-              className="min-h-[48px] w-full rounded-[16px] border border-[var(--border-control)] bg-[var(--bg)] px-3.5 text-[15px] font-bold text-[var(--ink)]"
-            />
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <input
-              id="settings-payday-repeat"
-              type="checkbox"
-              checked={repeatMonthly}
-              onChange={(e) => setRepeatMonthly(e.target.checked)}
-              className="h-5 w-5"
-            />
-            <label
-              htmlFor="settings-payday-repeat"
-              className="text-[13px] font-bold text-[var(--ink)]"
-            >
-              Ulangi tiap bulan pada tanggal yang sama
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            style={{
-              backgroundColor: 'var(--primary)',
-              color: 'var(--on-primary)',
+        <form onSubmit={(e) => void handleSavePayday(e)} className="mt-3 space-y-3" noValidate>
+          <PaydayScheduleControl
+            today={live.today}
+            paydayRepeat={currentRepeat}
+            paydayWeekday={currentWeekday}
+            nextPayday={dateDraft}
+            dateInputId="settings-payday-input"
+            dateLabel="Tanggal kiriman atau gajian"
+            dateError={dateError}
+            onRepeatChange={(mode) => void handleRepeatChange(mode)}
+            onWeekdayChange={(day) => void handleWeekdayChange(day)}
+            onDateChange={(val) => {
+              setDateDraft(val);
+              if (dateError) setDateError(null);
             }}
-            className="min-h-[44px] rounded-[20px] px-4 text-[13px] font-extrabold"
-          >
-            Simpan jadwal kiriman
-          </button>
+          />
+
+          {currentRepeat !== 'weekly' && (
+            <button
+              type="submit"
+              style={{
+                backgroundColor: 'var(--primary)',
+                color: 'var(--on-primary)',
+              }}
+              className="min-h-[44px] rounded-[20px] px-4 text-[13px] font-extrabold"
+            >
+              Simpan jadwal kiriman
+            </button>
+          )}
         </form>
       </section>
 

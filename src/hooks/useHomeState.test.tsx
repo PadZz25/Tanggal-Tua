@@ -5,6 +5,7 @@ import { App } from '../app/App';
 import { db } from '../data/db';
 import {
   mergeWithDefaultSettings,
+  normalizeSettings,
   resetAllData,
   updateSettings,
 } from '../data/repositories/settings';
@@ -100,5 +101,46 @@ describe('Loader & bootstrap resilience (Bug B)', () => {
     const savedTxs = await getAllTransactions();
     expect(savedTxs).toHaveLength(1);
     expect(savedTxs[0].note).toBe('Kopi aman');
+  });
+
+  it('normalizes legacy settings rows without paydayRepeat/paydayWeekday safely', () => {
+    const legacyMonthly = normalizeSettings(
+      {
+        id: 'main',
+        hasOnboarded: true,
+        paydayDay: 15,
+      },
+      '2026-11-18'
+    );
+    expect(legacyMonthly.paydayRepeat).toBe('monthly');
+    expect(legacyMonthly.paydayDay).toBe(15);
+    expect(legacyMonthly.paydayWeekday).toBeNull();
+
+    const legacyNone = normalizeSettings(
+      {
+        id: 'main',
+        hasOnboarded: true,
+        paydayDay: null,
+      },
+      '2026-11-18'
+    );
+    expect(legacyNone.paydayRepeat).toBe('none');
+    expect(legacyNone.paydayDay).toBeNull();
+    expect(legacyNone.paydayWeekday).toBeNull();
+
+    const weeklyRow = normalizeSettings(
+      {
+        id: 'main',
+        hasOnboarded: true,
+        nextPayday: '2026-11-28',
+        paydayRepeat: 'weekly',
+        paydayWeekday: 6,
+        paydayDay: null,
+      },
+      '2026-11-21'
+    );
+    expect(weeklyRow.paydayRepeat).toBe('weekly');
+    expect(weeklyRow.paydayWeekday).toBe(6);
+    expect(weeklyRow.paydayDay).toBeNull();
   });
 });

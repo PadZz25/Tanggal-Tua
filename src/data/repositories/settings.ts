@@ -1,19 +1,69 @@
-import { rollPayday, today } from '../../domain/dates';
-import type { Settings, ThemePreference } from '../../domain/types';
+import { getIsoWeekday, parseDateParts, rollPayday, today } from '../../domain/dates';
+import type {
+  PaydayRepeat,
+  PaydayWeekday,
+  Settings,
+  ThemePreference,
+} from '../../domain/types';
 import { normalizeThemePreference } from '../../hooks/useTheme';
 import { db } from '../db';
 import { createDefaultSettings, ensureSeeded } from '../seed';
 
-export function mergeWithDefaultSettings(
+function normalizeWeekday(value: unknown): PaydayWeekday | null {
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 7) {
+    return value as PaydayWeekday;
+  }
+  return null;
+}
+
+export function normalizeSettings(
   row: Partial<Settings> | undefined,
   currentToday: string = today()
 ): Settings {
   const defaults = createDefaultSettings(currentToday);
   if (!row) return defaults;
 
+  const mergedRaw: Settings = { ...defaults, ...row };
+  const resolvedNextPayday =
+    typeof row.nextPayday === 'string' && row.nextPayday
+      ? row.nextPayday
+      : defaults.nextPayday;
+
+  const resolvedPaydayDay =
+    'paydayDay' in row
+      ? typeof row.paydayDay === 'number' &&
+        Number.isInteger(row.paydayDay) &&
+        row.paydayDay >= 1 &&
+        row.paydayDay <= 31
+        ? row.paydayDay
+        : null
+      : defaults.paydayDay;
+
+  let resolvedRepeat: PaydayRepeat;
+  if (
+    row.paydayRepeat === 'none' ||
+    row.paydayRepeat === 'monthly' ||
+    row.paydayRepeat === 'weekly'
+  ) {
+    resolvedRepeat = row.paydayRepeat;
+  } else {
+    resolvedRepeat = resolvedPaydayDay !== null ? 'monthly' : 'none';
+  }
+
+  let resolvedWeekday = normalizeWeekday(row.paydayWeekday);
+  if (resolvedRepeat === 'weekly' && resolvedWeekday === null) {
+    resolvedWeekday = getIsoWeekday(resolvedNextPayday);
+  }
+
+  const finalPaydayDay =
+    resolvedRepeat === 'monthly' && resolvedPaydayDay === null
+      ? parseDateParts(resolvedNextPayday).day
+      : resolvedRepeat === 'monthly'
+        ? resolvedPaydayDay
+        : null;
+
   return {
-    ...defaults,
-    ...row,
+    ...mergedRaw,
     id: 'main',
     theme: normalizeThemePreference(row.theme ?? defaults.theme),
     hasOnboarded:
@@ -26,10 +76,10 @@ export function mergeWithDefaultSettings(
       typeof row.openingDate === 'string' && row.openingDate
         ? row.openingDate
         : defaults.openingDate,
-    nextPayday:
-      typeof row.nextPayday === 'string' && row.nextPayday
-        ? row.nextPayday
-        : defaults.nextPayday,
+    nextPayday: resolvedNextPayday,
+    paydayRepeat: resolvedRepeat,
+    paydayDay: finalPaydayDay,
+    paydayWeekday: resolvedRepeat === 'weekly' ? resolvedWeekday : null,
     tanggalTuaThreshold:
       typeof row.tanggalTuaThreshold === 'number' &&
       Number.isFinite(row.tanggalTuaThreshold)
@@ -38,10 +88,12 @@ export function mergeWithDefaultSettings(
   };
 }
 
+export const mergeWithDefaultSettings = normalizeSettings;
+
 export async function getSettings(currentToday: string = today()): Promise<Settings> {
   const existing = await db.settings.get('main');
   if (existing) {
-    return mergeWithDefaultSettings(existing, currentToday);
+    return normalizeSettings(existing, currentToday);
   }
   const fallback = createDefaultSettings(currentToday);
   await db.settings.put(fallback);
@@ -58,13 +110,13 @@ export async function updateSettings(
 
   const updatedCount = await db.settings.update('main', sanitizedPatch);
   if (updatedCount === 0) {
-    const merged = mergeWithDefaultSettings(sanitizedPatch);
+    const merged = normalizeSettings(sanitizedPatch);
     await db.settings.put(merged);
     return merged;
   }
 
   const fresh = await db.settings.get('main');
-  return mergeWithDefaultSettings(fresh);
+  return normalizeSettings(fresh);
 }
 
 export async function completeOnboarding(params: {
@@ -72,15 +124,22 @@ export async function completeOnboarding(params: {
   openingDate: string;
   nextPayday: string;
   paydayDay: number | null;
+  paydayRepeat?: PaydayRepeat;
+  paydayWeekday?: PaydayWeekday | null;
   theme: ThemePreference;
 }): Promise<Settings> {
   await ensureSeeded(params.openingDate);
+  const paydayRepeat: PaydayRepeat =
+    params.paydayRepeat ?? (params.paydayDay !== null ? 'monthly' : 'none');
+
   return updateSettings({
     hasOnboarded: true,
     openingBalance: params.openingBalance,
     openingDate: params.openingDate,
     nextPayday: params.nextPayday,
-    paydayDay: params.paydayDay,
+    paydayRepeat,
+    paydayDay: paydayRepeat === 'monthly' ? params.paydayDay : null,
+    paydayWeekday: paydayRepeat === 'weekly' ? (params.paydayWeekday ?? null) : null,
     theme: normalizeThemePreference(params.theme),
   });
 }
@@ -93,7 +152,11 @@ export async function checkAndRollPayday(
     return { rolled: false, settings };
   }
 
-  const result = rollPayday(currentToday, settings.nextPayday, settings.paydayDay);
+  const result = rollPayday(currentToday, settings.nextPayday, {
+    paydayRepeat: settings.paydayRepeat,
+    paydayDay: settings.paydayDay,
+    paydayWeekday: settings.paydayWeekday,
+  });
   if (!result.rolled) {
     return { rolled: false, settings };
   }

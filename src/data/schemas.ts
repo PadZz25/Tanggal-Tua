@@ -56,18 +56,37 @@ export const TemplateSchema = z.object({
   usageCount: z.number().int().min(0),
 });
 
-export const SettingsSchema = z.object({
-  id: z.literal('main'),
-  schemaVersion: z.number().int().min(1),
-  hasOnboarded: z.boolean(),
-  openingBalance: z.number().int().min(-MAX_AMOUNT).max(MAX_AMOUNT),
-  openingDate: z.string().regex(dateStringRegex),
-  nextPayday: z.string().regex(dateStringRegex),
-  paydayDay: z.number().int().min(1).max(31).nullable(),
-  tanggalTuaThreshold: z.number().int().min(1_000).max(MAX_AMOUNT),
-  theme: z.enum(['system', 'light', 'dark']),
-  lastExportAt: z.string().nullable(),
-});
+const PaydayWeekdaySchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+  z.literal(5),
+  z.literal(6),
+  z.literal(7),
+]);
+
+export const SettingsSchema = z
+  .object({
+    id: z.literal('main'),
+    schemaVersion: z.number().int().min(1),
+    hasOnboarded: z.boolean(),
+    openingBalance: z.number().int().min(-MAX_AMOUNT).max(MAX_AMOUNT),
+    openingDate: z.string().regex(dateStringRegex),
+    nextPayday: z.string().regex(dateStringRegex),
+    paydayRepeat: z.enum(['none', 'monthly', 'weekly']).optional(),
+    paydayDay: z.number().int().min(1).max(31).nullable(),
+    paydayWeekday: PaydayWeekdaySchema.nullable().optional(),
+    tanggalTuaThreshold: z.number().int().min(1_000).max(MAX_AMOUNT),
+    theme: z.enum(['system', 'light', 'dark']),
+    lastExportAt: z.string().nullable(),
+  })
+  .transform((row) => ({
+    ...row,
+    paydayRepeat:
+      row.paydayRepeat ?? (row.paydayDay !== null ? ('monthly' as const) : ('none' as const)),
+    paydayWeekday: row.paydayWeekday ?? null,
+  }));
 
 export const ExportPayloadSchema = z.object({
   app: z.literal('tanggal-tua'),

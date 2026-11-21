@@ -162,4 +162,76 @@ describe('History & Settings pages (Milestone M5)', () => {
       );
     });
   });
+
+  it('switches Kiriman repeat schedule to weekly, shows weekday chips & preview, and syncs indicator across reload', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/pengaturan');
+    const { unmount } = render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Pengaturan' })).toBeInTheDocument();
+    });
+
+    // Initial onboarding had paydayDay=1 -> Tiap bulan checked
+    expect(screen.getByRole('radio', { name: 'Tiap bulan' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    expect(screen.getByLabelText('Tanggal kiriman atau gajian')).toBeInTheDocument();
+
+    // Switch to Tiap minggu -> date input hidden, weekday chips appear
+    await user.click(screen.getByRole('radio', { name: 'Tiap minggu' }));
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Tiap minggu' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+      expect(
+        screen.queryByLabelText('Tanggal kiriman atau gajian')
+      ).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('radio', { name: 'Sabtu' }));
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Sabtu' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+      expect(screen.getByTestId('payday-weekly-preview')).toHaveTextContent(
+        'Kiriman berikutnya: Sabtu, 21 Nov (3 hari lagi)'
+      );
+    });
+
+    // Switch briefly to Tidak, verify date input shows & marker updates
+    await user.click(screen.getByRole('radio', { name: 'Tidak' }));
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Tidak' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+      expect(screen.getByLabelText('Tanggal kiriman atau gajian')).toBeInTheDocument();
+    });
+
+    // Back to Tiap minggu + Sabtu then simulate full reload
+    await user.click(screen.getByRole('radio', { name: 'Tiap minggu' }));
+    await user.click(screen.getByRole('radio', { name: 'Sabtu' }));
+
+    unmount();
+    window.history.pushState({}, '', '/pengaturan');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Tiap minggu' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+      expect(screen.getByRole('radio', { name: 'Sabtu' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+      expect(screen.getByTestId('payday-weekly-preview')).toHaveTextContent(
+        'Kiriman berikutnya: Sabtu, 21 Nov (3 hari lagi)'
+      );
+    });
+  });
 });

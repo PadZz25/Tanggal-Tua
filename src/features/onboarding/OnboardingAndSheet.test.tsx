@@ -87,4 +87,53 @@ describe('Onboarding & TransactionSheet (Milestone M4)', () => {
       expect(all[0].note).toBe('Ayam geprek');
     });
   });
+
+  it('supports weekly payday repeat in Onboarding step 2 with weekday chips, hidden date picker, and live preview', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <OnboardingPage today="2026-11-18" />
+      </MemoryRouter>
+    );
+
+    await user.type(screen.getByLabelText('Saldo saat ini'), '210rb');
+    await user.click(screen.getByRole('button', { name: 'Lanjut' }));
+
+    // Step 2: Default mode is Tiap bulan
+    expect(screen.getByRole('radio', { name: 'Tiap bulan' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    expect(screen.getByLabelText('Tanggal kiriman berikutnya')).toBeInTheDocument();
+
+    // Switch to Tiap minggu -> date picker hidden, 7 weekday chips shown
+    await user.click(screen.getByRole('radio', { name: 'Tiap minggu' }));
+    expect(
+      screen.queryByLabelText('Tanggal kiriman berikutnya')
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: 'Sabtu' }));
+    expect(screen.getByRole('radio', { name: 'Sabtu' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    expect(screen.getByTestId('payday-weekly-preview')).toHaveTextContent(
+      'Kiriman berikutnya: Sabtu, 21 Nov (3 hari lagi)'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Lanjut' }));
+    await user.click(screen.getByRole('button', { name: 'Lihat jatah harianku' }));
+    // 210rb / 3 days = Rp 70rb
+    expect(screen.getByTestId('onboarding-final-allowance')).toHaveTextContent('Rp 70rb');
+
+    await user.click(screen.getByRole('button', { name: 'Mulai' }));
+    await waitFor(async () => {
+      const settings = await getSettings('2026-11-18');
+      expect(settings.paydayRepeat).toBe('weekly');
+      expect(settings.paydayWeekday).toBe(6);
+      expect(settings.paydayDay).toBeNull();
+      expect(settings.nextPayday).toBe('2026-11-21');
+    });
+  });
 });

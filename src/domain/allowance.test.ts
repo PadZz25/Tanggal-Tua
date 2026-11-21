@@ -142,4 +142,23 @@ describe('allowance & getHomeState domain contract (Section 5.2 & 5.3)', () => {
     expect(balances.currentBalance).toBe(607_000);
     expect(balances.spentToday).toBe(18_000);
   });
+
+  it('computes dailyAllowance cleanly with weekly daysLeft in 1..7', () => {
+    const weeklyState = getHomeState({
+      today: '2026-11-21',
+      nextPayday: '2026-11-28',
+      currentBalance: 210_000,
+      spentToday: 0,
+    });
+    expect(weeklyState.daysLeft).toBe(7);
+    expect(weeklyState.dailyAllowance).toBe(30_000);
+    expect(weeklyState.state).toBe('fresh');
+
+    const oneDayLeft = computeAllowance({
+      currentBalance: 45_000,
+      spentToday: 0,
+      daysLeft: 1,
+    });
+    expect(oneDayLeft.dailyAllowance).toBe(45_000);
+  });
 });

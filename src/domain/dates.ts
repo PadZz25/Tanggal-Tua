@@ -1,3 +1,5 @@
+import type { PaydayRepeat, PaydayWeekday } from './types';
+
 const MONTHS_SHORT_ID = [
   'Jan',
   'Feb',
@@ -14,6 +16,26 @@ const MONTHS_SHORT_ID = [
 ] as const;
 
 const DAYS_SHORT_ID = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] as const;
+
+export const WEEKDAY_OPTIONS: ReadonlyArray<{
+  value: PaydayWeekday;
+  short: string;
+  full: string;
+}> = [
+  { value: 1, short: 'Sen', full: 'Senin' },
+  { value: 2, short: 'Sel', full: 'Selasa' },
+  { value: 3, short: 'Rab', full: 'Rabu' },
+  { value: 4, short: 'Kam', full: 'Kamis' },
+  { value: 5, short: 'Jum', full: 'Jumat' },
+  { value: 6, short: 'Sab', full: 'Sabtu' },
+  { value: 7, short: 'Min', full: 'Minggu' },
+];
+
+export interface PaydaySchedule {
+  paydayRepeat: PaydayRepeat;
+  paydayDay: number | null;
+  paydayWeekday: PaydayWeekday | null;
+}
 
 const MS_PER_DAY = 86_400_000;
 
@@ -74,15 +96,65 @@ export function defaultNextPayday(currentToday: string): string {
   return `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 }
 
+export function getIsoWeekday(dateStr: string): PaydayWeekday {
+  const { year, month, day } = parseDateParts(dateStr);
+  const utcDay = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return (utcDay === 0 ? 7 : utcDay) as PaydayWeekday;
+}
+
+export function getNextWeeklyPayday(
+  currentToday: string,
+  paydayWeekday: PaydayWeekday
+): string {
+  const todayWeekday = getIsoWeekday(currentToday);
+  const rawDelta = (paydayWeekday - todayWeekday + 7) % 7;
+  // Today itself never counts as next payday, so same-weekday shifts +7 days.
+  const deltaDays = rawDelta === 0 ? 7 : rawDelta;
+  return addDays(currentToday, deltaDays);
+}
+
+export function formatWeekdayShortDate(dateStr: string): string {
+  const weekday = getIsoWeekday(dateStr);
+  const fullName = WEEKDAY_OPTIONS[weekday - 1]?.full ?? '';
+  return `${fullName}, ${formatShortDate(dateStr)}`;
+}
+
 export function rollPayday(
   currentToday: string,
   nextPayday: string,
-  paydayDay: number | null
+  scheduleOrDay: PaydaySchedule | number | null
 ): { nextPayday: string; rolled: boolean } {
   if (daysBetween(currentToday, nextPayday) > 0) {
     return { nextPayday, rolled: false };
   }
 
+  const schedule: PaydaySchedule =
+    typeof scheduleOrDay === 'object' && scheduleOrDay !== null
+      ? scheduleOrDay
+      : {
+          paydayRepeat: scheduleOrDay !== null ? 'monthly' : 'none',
+          paydayDay: scheduleOrDay,
+          paydayWeekday: null,
+        };
+
+  if (schedule.paydayRepeat === 'none') {
+    return { nextPayday, rolled: false };
+  }
+
+  if (schedule.paydayRepeat === 'weekly') {
+    const weekday =
+      schedule.paydayWeekday !== null &&
+      schedule.paydayWeekday >= 1 &&
+      schedule.paydayWeekday <= 7
+        ? schedule.paydayWeekday
+        : getIsoWeekday(nextPayday);
+    return {
+      nextPayday: getNextWeeklyPayday(currentToday, weekday),
+      rolled: true,
+    };
+  }
+
+  const { paydayDay } = schedule;
   if (paydayDay === null || paydayDay < 1 || paydayDay > 31) {
     return { nextPayday, rolled: false };
   }

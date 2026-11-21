@@ -84,7 +84,7 @@ describe('History & Settings pages (Milestone M5)', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Pengaturan' })).toBeInTheDocument();
-      expect(screen.getByText(/Versi 0\.3\.0/i)).toBeInTheDocument();
+      expect(screen.getByText(/Versi 0\.3\.1/i)).toBeInTheDocument();
     });
 
     const balanceInput = screen.getByLabelText('Uang nyata yang kamu pegang sekarang');
@@ -107,7 +107,7 @@ describe('History & Settings pages (Milestone M5)', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Pengaturan' })).toBeInTheDocument();
-      expect(screen.getByText(/Versi 0\.3\.0/i)).toBeInTheDocument();
+      expect(screen.getByText(/Versi 0\.3\.1/i)).toBeInTheDocument();
     });
 
     const radioTerang = screen.getByRole('radio', { name: 'Terang' });
@@ -214,7 +214,14 @@ describe('History & Settings pages (Milestone M5)', () => {
 
     // Back to Tiap minggu + Sabtu then simulate full reload
     await user.click(screen.getByRole('radio', { name: 'Tiap minggu' }));
-    await user.click(screen.getByRole('radio', { name: 'Sabtu' }));
+    const saturdayChip = await screen.findByRole('radio', { name: 'Sabtu' });
+    await user.click(saturdayChip);
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Sabtu' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+    });
 
     unmount();
     window.history.pushState({}, '', '/pengaturan');

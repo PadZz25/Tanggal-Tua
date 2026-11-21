@@ -10,7 +10,7 @@ Kebanyakan orang berhenti memakai aplikasi pencatat pengeluaran dalam beberapa m
 
 ## Fitur Utama
 
-- **Sisa Jatah Harian & Total Sisa Uang:** Menghitung plafon harian dari saldo aktif dibagi sisa hari menuju kiriman berikutnya, sekaligus menampilkan total sisa uang yang masih dipegang secara langsung di kartu utama. Pengeluaran hari ini hanya mengurangi sisa hari ini; kelebihan belanja otomatis menyesuaikan jatah hari-hari berikutnya.
+- **Sisa Jatah Harian & Total Sisa Uang:** Menghitung plafon harian dari saldo aktif dibagi sisa hari menuju kiriman berikutnya (mendukung jadwal sekali, mingguan, maupun bulanan), sekaligus menampilkan total sisa uang yang masih dipegang secara langsung di kartu utama. Pengeluaran hari ini hanya mengurangi sisa hari ini; kelebihan belanja otomatis menyesuaikan jatah hari-hari berikutnya.
 - **Mode Tanggal Tua Tanpa Menghakimi:** Saat jatah harian di bawah ambang batas (Rp 30.000) atau tersisa ≤ 20%, tampilan beralih ke warna terakota hangat dengan pesan maskot **Receh** yang menenangkan.
 - **Catat Cepat 5 Detik:** Ketik gaya chat (`kopi susu 18.000`, `bakso 2 porsi 20rb`, `+500rb freelance`, `transfer dari ortu 1jt`, `kopi 18rb kemarin`) dengan pratinjau langsung dan tombol **Batalkan** selama 5 detik.
 - **Template Satu Ketuk:** Simpan pengeluaran rutin dalam sekali ketuk, diurutkan otomatis berdasarkan frekuensi pemakaian.

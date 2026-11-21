@@ -172,7 +172,7 @@ Sifat penting: menambah pengeluaran hari ini **tidak mengubah** `dailyAllowance`
 - **Koreksi saldo:** membuat transaksi `adjustment` bertanda (positif/negatif) agar riwayat tetap konsisten; jangan menimpa `openingBalance`.
 - **Hapus transaksi:** hapus keras setelah toast "Batalkan" kedaluwarsa (5 detik). Selama toast aktif, tampilan sudah memperlihatkan keadaan setelah hapus.
 - **Batas nominal:** 1 ≤ nominal ≤ 1.000.000.000. Di luar itu: tolak dengan pesan ramah.
-- **Kiriman berulang:** pengaturan opsional `paydayDay` (1–31; jika bulan lebih pendek, pakai hari terakhir bulan). Saat `nextPayday` terlewati, geser otomatis ke kemunculan berikutnya **dan** tampilkan prompt "Kiriman sudah masuk? Catat" (tidak membuat pemasukan otomatis).
+- **Kiriman berulang:** pengaturan jadwal pada `settings`: `paydayRepeat` (`'none' | 'monthly' | 'weekly'`), `paydayDay` (`1..31`, untuk `'monthly'`; jika bulan lebih pendek pakai hari terakhir bulan), dan `paydayWeekday` (`1..7`, dengan `1 = Senin` s.d. `7 = Minggu`, untuk `'weekly'`). Pada mode mingguan, `nextPayday` adalah kemunculan pertama hari yang dipilih **setelah** hari ini (hari ini tidak dihitung, sehingga `daysLeft` selalu `1..7`). Saat `nextPayday` terlewati/tiba pada mode berulang, geser otomatis ke kemunculan berikutnya (+7 hari sampai `> today` untuk mingguan, atau bulan berikutnya untuk bulanan) **dan** tampilkan prompt `"Kiriman sudah masuk? Catat"` (tidak membuat pemasukan otomatis). Baris settings lama tanpa `paydayRepeat` dinormalisasi menjadi `'monthly'` jika `paydayDay != null`, selain itu `'none'`.
 - **Data kosong:** state kosong wajib ada untuk Beranda dan Riwayat, dengan maskot.
 
 ### 5.5 Format angka (fungsi `formatRupiah*` di `src/domain/money.ts`)
@@ -294,7 +294,9 @@ interface Settings {       // satu baris, id = 'main'
   openingBalance: number;
   openingDate: string;
   nextPayday: string;
-  paydayDay: number | null;
+  paydayRepeat: 'none' | 'monthly' | 'weekly';
+  paydayDay: number | null;      // 1–31 untuk 'monthly'
+  paydayWeekday: number | null;  // 1–7 (1 = Senin .. 7 = Minggu) untuk 'weekly'
   tanggalTuaThreshold: number;   // default 30000
   theme: 'system' | 'light' | 'dark';
   lastExportAt: string | null;
@@ -456,7 +458,7 @@ Navigasi bawah (4 item, tinggi 64px): **Beranda, Riwayat, Ringkasan, Pengaturan*
 ### 10.2 Onboarding (F1)
 Satu pertanyaan per layar, tombol utama besar, indikator langkah.
 1. "Uang yang kamu pegang sekarang berapa?" → input nominal (boleh gaya "850rb", memakai parser nominal yang sama). Menyimpan `openingBalance` dan `openingDate = today`.
-2. "Kiriman/gajian berikutnya tanggal berapa?" → pemilih tanggal (default: tanggal 1 bulan depan), opsi "Ulangi tiap bulan" (menyimpan `paydayDay`).
+2. "Kiriman/gajian berikutnya tanggal berapa?" → kontrol **Ulangi** (`Tidak | Tiap minggu | Tiap bulan`). Pada `Tidak` atau `Tiap bulan`: tampilkan pemilih tanggal (default: tanggal 1 bulan depan) dan simpan `paydayDay` (jika bulanan). Pada `Tiap minggu`: sembunyikan pemilih tanggal, tampilkan 7 chip hari (`Sen` s.d. `Min`), hitung `nextPayday` otomatis beserta pratinjau `"Kiriman berikutnya: {Hari}, {tanggal} ({n} hari lagi)"`.
 3. (Opsional, boleh dilewati) pilih tema Sistem/Terang/Gelap.
 Penutup: layar "Jatah harianmu: Rp 65rb" dengan maskot, tombol "Mulai". Isi data seed (kategori, template).
 
@@ -493,7 +495,7 @@ Rute `/ringkasan?periode=minggu|bulan&tanggal=YYYY-MM-DD` (lazy-loaded):
 - State memuat/kosong/error terpisah; kosong menampilkan maskot Receh + "Belum ada catatan di periode ini. Yuk catat dulu.". Bila hanya ada pemasukan, area chart kategori menampilkan "Belum ada pengeluaran".
 
 ### 10.6 Pengaturan (F7)
-Bagian: **Tampilan** (tema), **Kiriman** (tanggal berikutnya, ulangi tiap bulan), **Saldo** (koreksi saldo → membuat `adjustment`), **Template** (tambah/ubah/hapus/urutkan), **Data** (Export JSON, Export CSV, Import, Hapus semua data dengan konfirmasi dua langkah), **Tentang** (versi, ringkasan privasi: "Datamu hanya ada di perangkat ini").
+Bagian: **Tampilan** (tema), **Kiriman** (kontrol `Ulangi`: `Tidak | Tiap minggu | Tiap bulan`; pemilih tanggal untuk `Tidak`/`Tiap bulan`, atau 7 chip hari + pratinjau otomatis untuk `Tiap minggu`, tersimpan lewat update parsial dengan penanda sinkron terhadap `settings`), **Saldo** (koreksi saldo → membuat `adjustment`), **Template** (tambah/ubah/hapus/urutkan), **Data** (Export JSON, Export CSV, Import, Hapus semua data dengan konfirmasi dua langkah), **Tentang** (versi, ringkasan privasi: "Datamu hanya ada di perangkat ini").
 
 ### 10.7 Patungan (P1)
 Daftar orang dengan saldo bersih (siapa utang ke siapa), tombol "Tambah utang", tandai lunas, bagi tagihan rata ("Total 120rb, 4 orang → 30rb per orang", lalu buat catatan utang untuk yang lain). Transaksi patungan milikmu tetap tercatat sebagai pengeluaran biasa sebesar bagianmu.

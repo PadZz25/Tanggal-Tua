@@ -3,6 +3,14 @@
 Seluruh perubahan penting pada proyek **Tanggal Tua** dicatat di dokumen ini.
 Format mengacu pada [Keep a Changelog](https://keepachangelog.com/id/1.1.0/), dan penomoran versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
+## [0.3.1] - 2026-11-21
+
+### Added
+- Dukungan jadwal kiriman berulang mingguan (`Tiap minggu`) di Onboarding langkah 2 dan Pengaturan dengan pilihan 7 chip hari (`Sen`–`Min`), pratinjau tanggal otomatis, serta pergeseran +7 hari otomatis tanpa membuat transaksi pemasukan otomatis.
+
+### Fixed
+- Navigasi bawah (`BottomNav`) tidak lagi hilang permanen setelah mengetuk input catat cepat atau saat keyboard Android ditutup lewat gestur *Back* tanpa `blur`; visibilitas navigasi kini diturunkan dari penyusutan `visualViewport` saat ini dan dilengkapi padding `safe-area-inset`.
+
 ## [0.3.0] - 2026-11-19
 
 ### Added

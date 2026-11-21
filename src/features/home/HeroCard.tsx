@@ -11,6 +11,7 @@ interface HeroCardProps {
   today: string;
   nextPayday: string;
   homeState: HomeStateResult;
+  showPaydayBanner?: boolean;
   onConfigurePayday: () => void;
   onRecordIncome: () => void;
 }
@@ -78,6 +79,7 @@ export function HeroCard({
   today,
   nextPayday,
   homeState,
+  showPaydayBanner = true,
   onConfigurePayday,
   onRecordIncome,
 }: HeroCardProps) {
@@ -137,7 +139,7 @@ export function HeroCard({
             : ''
         }`}
       >
-        {paydayRolledBanner && (
+        {showPaydayBanner && paydayRolledBanner && (
           <div className="mb-3 flex items-center justify-between gap-2 rounded-[16px] bg-[var(--coin)] px-3.5 py-2 text-[var(--coin-ink)]">
             <span className="text-[13px] font-bold">{UI_STRINGS.paydayPrompt}</span>
             <div className="flex items-center gap-1">

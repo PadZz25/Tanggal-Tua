@@ -1,15 +1,20 @@
-import { AlertCircle, Bell, Plus, Target, X } from 'lucide-react';
+import { AlertCircle, Bell, Download, Plus, Target, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Wordmark } from '../../components/brand/Wordmark';
 import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
+import { IosInstallGuide } from '../../components/ui/IosInstallGuide';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Sheet } from '../../components/ui/Sheet';
+import { exportToJson } from '../../data/exportImport';
+import { updateSettings } from '../../data/repositories/settings';
 import { createTemplate } from '../../data/repositories/templates';
+import { pickHomeBanner, shouldShowBackupReminder } from '../../domain/banners';
 import {
   evaluateAllBudgets,
   formatBudgetHomeAlert,
 } from '../../domain/budgets';
+import { addDays } from '../../domain/dates';
 import { pickPrimaryActiveGoal } from '../../domain/goals';
 import { formatHeroShort, isValidAmount, parseNominalInput } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
@@ -22,6 +27,8 @@ import { computeGoalSaved, GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
 import { useCurrentMinutes } from '../../hooks/useCurrentMinutes';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { useUIStore } from '../../hooks/useUIStore';
+import { downloadBlob } from '../../lib/download';
+import { isIosSafari, usePwaStatus } from '../../lib/pwa';
 import { HeroCard } from './HeroCard';
 import { QuickAddBar } from './QuickAddBar';
 import { QuickChips } from './QuickChips';
@@ -38,6 +45,8 @@ export function HomePage({ live }: HomePageProps) {
   const location = useLocation();
   const openTransactionSheet = useUIStore((s) => s.openTransactionSheet);
   const showToast = useUIStore((s) => s.showToast);
+  const paydayRolledBanner = useUIStore((s) => s.paydayRolledBanner);
+  const pwaStatus = usePwaStatus();
 
   const quickAddInputRef = useRef<HTMLInputElement>(null);
   const currentMinutes = useCurrentMinutes();
@@ -86,9 +95,46 @@ export function HomePage({ live }: HomePageProps) {
     dayMarks: live.dayMarks,
   });
 
+  const showIosInstallBanner =
+    isIosSafari() && !pwaStatus.isStandalone && !live.settings.iosHintDismissed;
+
+  const showBackupBanner = shouldShowBackupReminder({
+    transactionsCount: live.transactions.length,
+    lastExportAt: live.settings.lastExportAt,
+    backupSnoozeUntil: live.settings.backupSnoozeUntil,
+    today: live.today,
+  });
+
+  const activeBanner = pickHomeBanner({
+    payday: paydayRolledBanner,
+    reminder: showReminderBanner,
+    budget: Boolean(budgetAlertText),
+    iosInstall: showIosInstallBanner,
+    backup: showBackupBanner,
+  });
+
   const handleDismissReminder = () => {
     writeDismissedReminderDate(live.today);
     setDismissedReminderDate(live.today);
+  };
+
+  const handleBackupNow = async () => {
+    const nowIso = `${live.today}T${new Date().toISOString().slice(11)}`;
+    const json = await exportToJson(nowIso);
+    downloadBlob(
+      json,
+      `tanggal-tua-backup-${live.today}.json`,
+      'application/json;charset=utf-8'
+    );
+    showToast({ message: 'Cadangan JSON berhasil diunduh' });
+  };
+
+  const handleSnoozeBackup = async () => {
+    await updateSettings({ backupSnoozeUntil: addDays(live.today, 7) });
+  };
+
+  const handleDismissIosHint = async () => {
+    await updateSettings({ iosHintDismissed: true });
   };
 
   const handleCreateTemplate = async (e: React.FormEvent) => {
@@ -138,11 +184,12 @@ export function HomePage({ live }: HomePageProps) {
         today={live.today}
         nextPayday={live.settings.nextPayday}
         homeState={live.homeState}
+        showPaydayBanner={activeBanner === 'payday'}
         onConfigurePayday={() => navigate('/pengaturan')}
         onRecordIncome={() => openTransactionSheet({ defaultType: 'income' })}
       />
 
-      {showReminderBanner && (
+      {activeBanner === 'reminder' && (
         <section
           aria-label="Pengingat catat harian"
           data-testid="home-reminder-banner"
@@ -191,7 +238,7 @@ export function HomePage({ live }: HomePageProps) {
         </section>
       )}
 
-      {budgetAlertText && (
+      {activeBanner === 'budget' && budgetAlertText && (
         <Link
           to="/anggaran"
           data-testid="home-budget-alert"
@@ -206,6 +253,63 @@ export function HomePage({ live }: HomePageProps) {
           <AlertCircle size={16} strokeWidth={2.3} aria-hidden="true" className="shrink-0" />
           <span className="truncate">{budgetAlertText}</span>
         </Link>
+      )}
+
+      {activeBanner === 'ios-install' && (
+        <section
+          aria-label="Panduan pasang aplikasi di iPhone"
+          data-testid="home-ios-install-banner"
+          className="mt-2.5 rounded-[20px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[14px] font-extrabold text-[var(--ink)]">
+              Pasang ke Layar Utama
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleDismissIosHint()}
+              aria-label="Tutup panduan instal iPhone"
+              className="-mr-1.5 -mt-1.5 inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--ink)]"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="mt-1.5">
+            <IosInstallGuide compact />
+          </div>
+        </section>
+      )}
+
+      {activeBanner === 'backup' && (
+        <section
+          aria-label="Pengingat cadangan data"
+          data-testid="home-backup-banner"
+          className="mt-2.5 rounded-[20px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
+        >
+          <div className="flex items-start gap-2">
+            <Download size={16} strokeWidth={2.2} aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--primary)]" />
+            <p className="text-[13px] font-bold text-[var(--ink)]">
+              Sudah 30 hari sejak cadangan terakhir. Unduh cadangan biar datamu aman.
+            </p>
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void handleBackupNow()}
+              style={{ backgroundColor: 'var(--primary)', color: 'var(--on-primary)' }}
+              className="min-h-[44px] rounded-[14px] px-4 text-[13px] font-extrabold"
+            >
+              Unduh cadangan
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSnoozeBackup()}
+              className="min-h-[44px] rounded-[14px] border border-[var(--border-control)] bg-[var(--bg)] px-4 text-[13px] font-bold text-[var(--ink)]"
+            >
+              Nanti
+            </button>
+          </div>
+        </section>
       )}
 
       <QuickChips

@@ -2,6 +2,7 @@ import { Download, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import {
   isInAppWebView,
+  isIosSafari,
   triggerNativePwaInstall,
   usePwaStatus,
 } from '../../lib/pwa';
@@ -15,7 +16,7 @@ export function InstallPwaButton({ variant = 'compact' }: InstallPwaButtonProps)
   const { isStandalone, canPromptInstall, swRegistered, isSecure } = usePwaStatus();
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
-  if (isStandalone) return null;
+  if (isStandalone || isIosSafari()) return null;
 
   const inAppBrowser = isInAppWebView();
 

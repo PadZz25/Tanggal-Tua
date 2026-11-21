@@ -352,6 +352,24 @@ describe('History & Settings pages (Milestone M5)', () => {
       expect(screen.getByRole('status')).toHaveTextContent(
         'Berkas pengingat kalender (.ics) berhasil diunduh'
       );
+
+      // Verify Settings displays last backup status and persistent storage status
+      expect(screen.getByTestId('settings-last-backup')).toHaveTextContent(
+        'Cadangan terakhir: Belum pernah'
+      );
+      expect(screen.getByTestId('settings-persistence-status')).toHaveTextContent(
+        /Penyimpanan permanen: (aktif|tidak aktif)/
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Export JSON (Penuh)' }));
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-last-backup')).toHaveTextContent(
+          'Cadangan terakhir: 18 Nov 2026 (hari ini)'
+        );
+        expect(screen.getByRole('status')).toHaveTextContent(
+          'Cadangan JSON berhasil diunduh'
+        );
+      });
     } finally {
       if (origCreateObjectUrl) {
         Object.defineProperty(URL, 'createObjectURL', origCreateObjectUrl);

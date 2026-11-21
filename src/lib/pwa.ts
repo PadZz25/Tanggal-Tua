@@ -177,10 +177,38 @@ export function usePwaStatus(): PwaStatusSnapshot {
   return useSyncExternalStore(subscribePwa, getPwaSnapshot, getPwaSnapshot);
 }
 
-export function isInAppWebView(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent || '';
-  return /(FBAN|FBAV|Instagram|Line\/|WhatsApp|Telegram|TikTok|wv\))/i.test(ua);
+export function isInAppWebView(ua?: string): boolean {
+  const resolved = ua ?? (typeof navigator !== 'undefined' ? navigator.userAgent || '' : '');
+  if (!resolved) return false;
+  return /(FBAN|FBAV|Instagram|Line\/|WhatsApp|Telegram|TikTok|wv\))/i.test(resolved);
+}
+
+/**
+ * Detects Safari on iPhone, iPad, iPod, or touch-capable iPadOS desktop UA,
+ * excluding third-party iOS browsers (Chrome/Firefox/Edge/Opera) and WebViews.
+ */
+export function isIosSafari(ua?: string, maxTouchPoints?: number): boolean {
+  if (typeof navigator === 'undefined' && ua === undefined) return false;
+  const resolvedUa = ua ?? (navigator.userAgent || '');
+  if (!resolvedUa) return false;
+
+  const touchPoints =
+    maxTouchPoints ??
+    (typeof navigator !== 'undefined' ? navigator.maxTouchPoints ?? 0 : 0);
+
+  const isIosDevice =
+    /iPhone|iPad|iPod/i.test(resolvedUa) ||
+    (/Macintosh/i.test(resolvedUa) && touchPoints > 1);
+  if (!isIosDevice) return false;
+
+  if (
+    /CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo/i.test(resolvedUa) ||
+    isInAppWebView(resolvedUa)
+  ) {
+    return false;
+  }
+
+  return /Safari\//i.test(resolvedUa);
 }
 
 export async function resetApplicationCache(): Promise<void> {
@@ -203,6 +231,21 @@ export async function resetApplicationCache(): Promise<void> {
   }
 }
 
+export async function checkPersistentStorage(): Promise<boolean> {
+  try {
+    if (
+      typeof navigator !== 'undefined' &&
+      navigator.storage &&
+      typeof navigator.storage.persisted === 'function'
+    ) {
+      return await navigator.storage.persisted();
+    }
+  } catch {
+    // Ignore when storage API is restricted
+  }
+  return false;
+}
+
 export async function requestPersistentStorage(): Promise<boolean> {
   try {
     if (
@@ -210,6 +253,10 @@ export async function requestPersistentStorage(): Promise<boolean> {
       navigator.storage &&
       typeof navigator.storage.persist === 'function'
     ) {
+      if (typeof navigator.storage.persisted === 'function') {
+        const alreadyPersisted = await navigator.storage.persisted();
+        if (alreadyPersisted) return true;
+      }
       return await navigator.storage.persist();
     }
   } catch {

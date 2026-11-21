@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -410,5 +410,107 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
       expect(screen.queryByTestId('home-reminder-banner')).not.toBeInTheDocument();
     });
     second.unmount();
+  });
+
+  it('enforces single-banner priority, snoozes & downloads backup JSON, and shows dismissible iOS Safari guide', async () => {
+    const user = userEvent.setup();
+    const origCreateObjectUrl = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
+    const origRevokeObjectUrl = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: vi.fn(() => 'blob:mock-backup'),
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      value: vi.fn(),
+      configurable: true,
+      writable: true,
+    });
+    const uaSpy = vi
+      .spyOn(window.navigator, 'userAgent', 'get')
+      .mockReturnValue(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
+      );
+
+    try {
+      await completeOnboarding({
+        openingBalance: 1_500_000,
+        openingDate: '2026-11-01',
+        nextPayday: '2026-12-01',
+        paydayDay: 1,
+        theme: 'light',
+      });
+
+      for (let i = 1; i <= 10; i++) {
+        await createTransaction({
+          type: 'expense',
+          amount: 10_000,
+          categoryId: 'cat-makan',
+          note: `Makan ${i}`,
+          date: '2026-11-18',
+          source: 'quick',
+        });
+      }
+
+      window.history.pushState({}, '', '/');
+      const { unmount } = render(<App />);
+
+      // iOS install guide beats backup banner (payday > reminder > budget > ios-install > backup)
+      const iosBanner = await screen.findByTestId('home-ios-install-banner');
+      expect(iosBanner).toHaveTextContent('Pasang ke Layar Utama');
+      expect(screen.queryByTestId('home-backup-banner')).not.toBeInTheDocument();
+
+      // Dismiss iOS guide -> backup banner immediately surfaces alone
+      await user.click(screen.getByRole('button', { name: 'Tutup panduan instal iPhone' }));
+      await screen.findByTestId('home-backup-banner');
+      expect(screen.queryByTestId('home-ios-install-banner')).not.toBeInTheDocument();
+
+      // Payday rolled banner preempts backup banner strictly (only one banner rendered)
+      act(() => {
+        useUIStore.getState().setPaydayRolledBanner(true);
+      });
+      await waitFor(() => {
+        expect(screen.getByText(/Kiriman sudah masuk\?/)).toBeInTheDocument();
+        expect(screen.queryByTestId('home-backup-banner')).not.toBeInTheDocument();
+      });
+      act(() => {
+        useUIStore.getState().setPaydayRolledBanner(false);
+      });
+      await waitFor(() => {
+        expect(screen.getByTestId('home-backup-banner')).toBeInTheDocument();
+      });
+
+      // Snooze hides backup banner for 7 days
+      await user.click(
+        within(screen.getByTestId('home-backup-banner')).getByRole('button', {
+          name: 'Nanti',
+        })
+      );
+      await waitFor(() => {
+        expect(screen.queryByTestId('home-backup-banner')).not.toBeInTheDocument();
+      });
+
+      // Advancing 7 days resurfaces backup banner; downloading clears it permanently for 30 days
+      unmount();
+      window.__TANGGAL_TUA_TODAY__ = '2026-11-25';
+      render(<App />);
+      const resurfaced = await screen.findByTestId('home-backup-banner');
+      await user.click(within(resurfaced).getByRole('button', { name: 'Unduh cadangan' }));
+      await waitFor(() => {
+        expect(screen.queryByTestId('home-backup-banner')).not.toBeInTheDocument();
+      });
+    } finally {
+      uaSpy.mockRestore();
+      if (origCreateObjectUrl) {
+        Object.defineProperty(URL, 'createObjectURL', origCreateObjectUrl);
+      } else {
+        delete (URL as { createObjectURL?: unknown }).createObjectURL;
+      }
+      if (origRevokeObjectUrl) {
+        Object.defineProperty(URL, 'revokeObjectURL', origRevokeObjectUrl);
+      } else {
+        delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
+      }
+    }
   });
 });

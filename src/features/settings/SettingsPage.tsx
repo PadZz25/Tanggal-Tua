@@ -14,6 +14,7 @@ import { useEffect, useState, type ChangeEvent, type FormEvent, type KeyboardEve
 import { useNavigate } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
+import { IosInstallGuide } from '../../components/ui/IosInstallGuide';
 import { PaydayScheduleControl } from '../../components/ui/PaydayScheduleControl';
 import { Sheet } from '../../components/ui/Sheet';
 import {
@@ -30,6 +31,7 @@ import {
   updateTemplate,
 } from '../../data/repositories/templates';
 import { createBalanceAdjustment } from '../../data/repositories/transactions';
+import { formatLastBackupLabel } from '../../domain/banners';
 import { UI_STRINGS } from '../../domain/copy';
 import {
   daysBetween,
@@ -47,6 +49,7 @@ import {
 } from '../../domain/money';
 import { parseTimeToMinutes } from '../../domain/reminder';
 import { generateReminderIcs } from '../../lib/ics';
+import { checkPersistentStorage, isIosSafari, usePwaStatus } from '../../lib/pwa';
 import { getSelectableCategories } from '../../domain/parser/keywords';
 import type {
   PaydayRepeat,
@@ -96,6 +99,18 @@ export function SettingsPage({ live }: SettingsPageProps) {
   const [importError, setImportError] = useState<string | null>(null);
 
   const [resetStep, setResetStep] = useState<0 | 1>(0);
+  const [isPersistentStorage, setIsPersistentStorage] = useState(false);
+  const pwaStatus = usePwaStatus();
+
+  useEffect(() => {
+    let active = true;
+    void checkPersistentStorage().then((persisted) => {
+      if (active) setIsPersistentStorage(persisted);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const expenseCategories = getSelectableCategories(live.categories, 'expense');
   const currentTheme = normalizeThemePreference(live.settings.theme);
@@ -297,7 +312,8 @@ export function SettingsPage({ live }: SettingsPageProps) {
   };
 
   const handleExportJson = async () => {
-    const json = await exportToJson();
+    const nowIso = `${live.today}T${new Date().toISOString().slice(11)}`;
+    const json = await exportToJson(nowIso);
     downloadBlob(
       json,
       `tanggal-tua-backup-${live.today}.json`,
@@ -703,6 +719,13 @@ export function SettingsPage({ live }: SettingsPageProps) {
           <p className="mt-1 text-[12px] text-[var(--muted)]">
             Berkas ekspor disimpan apa adanya tanpa enkripsi. Simpan di folder pribadimu.
           </p>
+          <p
+            data-testid="settings-last-backup"
+            className="mt-1.5 text-[12px] font-bold text-[var(--ink)]"
+          >
+            Cadangan terakhir:{' '}
+            {formatLastBackupLabel(live.settings.lastExportAt, live.today)}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -830,20 +853,54 @@ export function SettingsPage({ live }: SettingsPageProps) {
       {/* 6. Tentang */}
       <section
         aria-labelledby="settings-about-heading"
-        className="flex items-center gap-3.5 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
+        className="space-y-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
       >
-        <Mascot mood="smile" size={44} />
-        <div>
-          <h2
-            id="settings-about-heading"
-            className="text-[14px] font-extrabold text-[var(--ink)]"
+        <div className="flex items-center gap-3.5">
+          <Mascot mood="smile" size={44} />
+          <div>
+            <h2
+              id="settings-about-heading"
+              className="text-[14px] font-extrabold text-[var(--ink)]"
+            >
+              {UI_STRINGS.appName} · Versi {__APP_VERSION__}
+            </h2>
+            <p className="text-[12px] font-medium text-[var(--muted)]">
+              {UI_STRINGS.privacySummary} Tanpa server, tanpa akun, dan berfungsi penuh offline.
+            </p>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--border-soft)] pt-3">
+          <p
+            data-testid="settings-persistence-status"
+            className="text-[13px] font-extrabold text-[var(--ink)]"
           >
-            {UI_STRINGS.appName} · Versi {__APP_VERSION__}
-          </h2>
-          <p className="text-[12px] font-medium text-[var(--muted)]">
-            {UI_STRINGS.privacySummary} Tanpa server, tanpa akun, dan berfungsi penuh offline.
+            Penyimpanan permanen: {isPersistentStorage ? 'aktif' : 'tidak aktif'}
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted)]">
+            Jika status belum aktif, browser dapat membersihkan data situs saat ruang perangkat
+            penuh; amankan rutin lewat{' '}
+            <a
+              href="#settings-data-heading"
+              className="font-bold text-[var(--primary)] underline"
+            >
+              Cadangan & Data Lokal
+            </a>
+            .
           </p>
         </div>
+
+        {isIosSafari() && !pwaStatus.isStandalone && (
+          <div
+            data-testid="settings-ios-install-guide"
+            className="border-t border-[var(--border-soft)] pt-3"
+          >
+            <h3 className="mb-1 text-[13px] font-extrabold text-[var(--ink)]">
+              Pasang ke Layar Utama
+            </h3>
+            <IosInstallGuide />
+          </div>
+        )}
       </section>
 
       <Sheet

@@ -1,57 +1,75 @@
-import { Plus } from 'lucide-react';
+import { Flame, Plus } from 'lucide-react';
 import {
   applyTemplateQuickTap,
   revertTemplateQuickTap,
 } from '../../data/repositories/templates';
 import { UI_STRINGS } from '../../domain/copy';
 import { formatShort } from '../../domain/money';
-import type { Template } from '../../domain/types';
-import { useUIStore } from '../../hooks/useUIStore';
-import { triggerHaptic } from '../../lib/haptics';
-import { requestPersistentStorage } from '../../lib/pwa';
+import type { DayMark, Template, Transaction } from '../../domain/types';
+import { runNewTransactionEffects } from '../transactions/postSaveEffects';
 
 interface QuickChipsProps {
   templates: Template[];
   today: string;
+  transactions?: Transaction[];
+  dayMarks?: DayMark[];
+  lastCelebratedStreak?: number;
+  currentStreak: number;
+  onOpenStreakSheet: () => void;
   onAddTemplateClick: () => void;
 }
 
 export function QuickChips({
   templates,
   today,
+  transactions = [],
+  dayMarks = [],
+  lastCelebratedStreak = 0,
+  currentStreak,
+  onOpenStreakSheet,
   onAddTemplateClick,
 }: QuickChipsProps) {
-  const showToast = useUIStore((s) => s.showToast);
-  const triggerMascotReaction = useUIStore((s) => s.triggerMascotReaction);
-
   const handleChipTap = async (tpl: Template) => {
     const { transaction, previousUsageCount } = await applyTemplateQuickTap({
       templateId: tpl.id,
       date: today,
     });
 
-    triggerHaptic(10);
-    triggerMascotReaction();
-    void requestPersistentStorage();
-
-    showToast({
-      message: `Tersimpan · ${tpl.label} ${formatShort(-tpl.amount)}`,
-      onUndo: async () => {
-        await revertTemplateQuickTap({
+    await runNewTransactionEffects({
+      createdTx: transaction,
+      transactionsBefore: transactions,
+      dayMarks,
+      lastCelebratedStreak,
+      today,
+      baseMessage: `Tersimpan · ${tpl.label} ${formatShort(-tpl.amount)}`,
+      undoTx: () =>
+        revertTemplateQuickTap({
           templateId: tpl.id,
           transactionId: transaction.id,
           previousUsageCount,
-        });
-      },
+        }),
     });
   };
 
   return (
     <section aria-label={UI_STRINGS.quickSectionLabel} className="mt-3">
-      <h2 className="text-[13px] font-bold text-[var(--muted)]">
-        {UI_STRINGS.quickSectionLabel}
-      </h2>
-      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-[13px] font-bold text-[var(--muted)]">
+          {UI_STRINGS.quickSectionLabel}
+        </h2>
+
+        <button
+          type="button"
+          data-testid="streak-pill"
+          onClick={onOpenStreakSheet}
+          aria-label={`Streak mencatat ${currentStreak} hari`}
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--border-control)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--ink)] transition-colors hover:bg-[var(--border-soft)] active:scale-95"
+        >
+          <Flame size={15} strokeWidth={2.3} className="text-[var(--primary)]" aria-hidden="true" />
+          <span className="tabular-nums">{currentStreak} hari</span>
+        </button>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
         {templates.map((tpl) => (
           <button
             key={tpl.id}

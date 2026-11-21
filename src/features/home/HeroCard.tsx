@@ -94,6 +94,7 @@ export function HeroCard({
 
   const paydayRolledBanner = useUIStore((s) => s.paydayRolledBanner);
   const setPaydayRolledBanner = useUIStore((s) => s.setPaydayRolledBanner);
+  const mascotCelebration = useUIStore((s) => s.mascotCelebration);
 
   const animatedRemaining = useAnimatedAmount(remainingToday);
   const isWarmState = state === 'tanggal-tua' || state === 'over';
@@ -104,11 +105,14 @@ export function HeroCard({
       ? `${shortPayday} · ${daysLeft} hari lagi`
       : `Kiriman ${shortPayday} · ${daysLeft} hari lagi`;
 
-  const mascotMessage = getMascotCopy({
-    state,
-    today,
-    remainingToday,
-  });
+  const mascotMessage =
+    mascotCelebration?.message ??
+    getMascotCopy({
+      state,
+      today,
+      remainingToday,
+    });
+  const displayMood = mascotCelebration?.mood ?? mood;
 
   return (
     <section
@@ -310,7 +314,7 @@ export function HeroCard({
           style={{ backgroundColor: 'var(--hero-chip)' }}
           className="mt-3 flex items-center gap-3 rounded-[18px] p-2.5"
         >
-          <Mascot mood={mood} size={40} />
+          <Mascot mood={displayMood} size={40} />
           <p data-testid="mascot-message" className="text-[14px] font-semibold leading-snug">
             {mascotMessage}
           </p>

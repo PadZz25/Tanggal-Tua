@@ -16,16 +16,18 @@ import {
 } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
 import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
-import type { Category, Transaction } from '../../domain/types';
+import type { Category, DayMark, Transaction } from '../../domain/types';
 import { useUIStore } from '../../hooks/useUIStore';
 import { triggerHaptic } from '../../lib/haptics';
-import { requestPersistentStorage } from '../../lib/pwa';
+import { runNewTransactionEffects } from './postSaveEffects';
 
 interface TransactionSheetProps {
   today: string;
   openingDate: string;
   categories: Category[];
   transactions: Transaction[];
+  dayMarks?: DayMark[];
+  lastCelebratedStreak?: number;
 }
 
 export function TransactionSheet({
@@ -33,13 +35,14 @@ export function TransactionSheet({
   openingDate,
   categories,
   transactions,
+  dayMarks = [],
+  lastCelebratedStreak = 0,
 }: TransactionSheetProps) {
   const isOpen = useUIStore((s) => s.isTransactionSheetOpen);
   const editingId = useUIStore((s) => s.editingTransactionId);
   const defaultType = useUIStore((s) => s.defaultTransactionType);
   const closeSheet = useUIStore((s) => s.closeTransactionSheet);
   const showToast = useUIStore((s) => s.showToast);
-  const triggerMascotReaction = useUIStore((s) => s.triggerMascotReaction);
   const initializedSessionRef = useRef<string | null>(null);
 
   const editingTx = editingId
@@ -157,9 +160,6 @@ export function TransactionSheet({
         date,
         source: 'form',
       });
-      triggerHaptic(10);
-      triggerMascotReaction();
-      void requestPersistentStorage();
       closeSheet();
 
       const signPrefix =
@@ -167,11 +167,14 @@ export function TransactionSheet({
           ? `+${formatShort(parsedAmount)}`
           : formatShort(-parsedAmount);
 
-      showToast({
-        message: `Tersimpan · ${created.note} ${signPrefix}`,
-        onUndo: async () => {
-          await deleteTransaction(created.id);
-        },
+      await runNewTransactionEffects({
+        createdTx: created,
+        transactionsBefore: transactions,
+        dayMarks,
+        lastCelebratedStreak,
+        today,
+        baseMessage: `Tersimpan · ${created.note} ${signPrefix}`,
+        undoTx: () => deleteTransaction(created.id),
       });
     }
   };

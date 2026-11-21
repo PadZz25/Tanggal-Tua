@@ -80,6 +80,8 @@ export function AppRoutes() {
         openingDate={live.settings.openingDate}
         categories={live.categories}
         transactions={live.transactions}
+        dayMarks={live.dayMarks}
+        lastCelebratedStreak={live.settings.lastCelebratedStreak}
       />
     </AppShell>
   );

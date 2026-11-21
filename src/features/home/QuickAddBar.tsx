@@ -7,17 +7,18 @@ import {
 import { UI_STRINGS } from '../../domain/copy';
 import { formatShort } from '../../domain/money';
 import { parseQuickAdd } from '../../domain/parser/parseQuickAdd';
-import type { Category } from '../../domain/types';
-import { useUIStore } from '../../hooks/useUIStore';
+import type { Category, DayMark, Transaction } from '../../domain/types';
 import { useViewportKeyboard } from '../../hooks/useViewportKeyboard';
-import { triggerHaptic } from '../../lib/haptics';
-import { requestPersistentStorage } from '../../lib/pwa';
+import { runNewTransactionEffects } from '../transactions/postSaveEffects';
 
 interface QuickAddBarProps {
   today: string;
   openingDate: string;
   categories: Category[];
   categoryMap: Map<string, Category>;
+  transactions?: Transaction[];
+  dayMarks?: DayMark[];
+  lastCelebratedStreak?: number;
 }
 
 export function QuickAddBar({
@@ -25,6 +26,9 @@ export function QuickAddBar({
   openingDate,
   categories,
   categoryMap,
+  transactions = [],
+  dayMarks = [],
+  lastCelebratedStreak = 0,
 }: QuickAddBarProps) {
   const [text, setText] = useState('');
   const [errorHint, setErrorHint] = useState<string | null>(null);
@@ -32,9 +36,7 @@ export function QuickAddBar({
   const inputId = useId();
   const hintId = useId();
 
-  const showToast = useUIStore((s) => s.showToast);
   const { isKeyboardOpen, keyboardInsetPx } = useViewportKeyboard();
-  const triggerMascotReaction = useUIStore((s) => s.triggerMascotReaction);
 
   const livePreview = useMemo(() => {
     if (!text.trim()) return null;
@@ -70,9 +72,6 @@ export function QuickAddBar({
       source: 'quick',
     });
 
-    triggerHaptic(10);
-    triggerMascotReaction();
-    void requestPersistentStorage();
     inputRef.current?.blur();
 
     const formattedDelta =
@@ -80,11 +79,14 @@ export function QuickAddBar({
         ? `+${formatShort(parsed.amount)}`
         : formatShort(-parsed.amount);
 
-    showToast({
-      message: `Tersimpan · ${created.note} ${formattedDelta}`,
-      onUndo: async () => {
-        await deleteTransaction(created.id);
-      },
+    await runNewTransactionEffects({
+      createdTx: created,
+      transactionsBefore: transactions,
+      dayMarks,
+      lastCelebratedStreak,
+      today,
+      baseMessage: `Tersimpan · ${created.note} ${formattedDelta}`,
+      undoTx: () => deleteTransaction(created.id),
     });
   };
 

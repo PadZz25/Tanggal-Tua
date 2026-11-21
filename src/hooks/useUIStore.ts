@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { TransactionType } from '../domain/types';
+import type { MascotMood, TransactionType } from '../domain/types';
 
 export interface ToastItem {
   id: string;
@@ -8,12 +8,18 @@ export interface ToastItem {
   onUndo?: () => Promise<void> | void;
 }
 
+export interface MascotCelebration {
+  mood: Extract<MascotMood, 'cheer' | 'wink'>;
+  message: string;
+}
+
 interface UIStoreState {
   toast: ToastItem | null;
   isTransactionSheetOpen: boolean;
   editingTransactionId: string | null;
   defaultTransactionType: TransactionType;
   mascotReactionTick: number;
+  mascotCelebration: MascotCelebration | null;
   paydayRolledBanner: boolean;
   showToast: (item: Omit<ToastItem, 'id'>) => void;
   dismissToast: () => void;
@@ -24,6 +30,7 @@ interface UIStoreState {
   }) => void;
   closeTransactionSheet: () => void;
   triggerMascotReaction: () => void;
+  setMascotCelebration: (celebration: MascotCelebration | null) => void;
   setPaydayRolledBanner: (visible: boolean) => void;
 }
 
@@ -35,6 +42,7 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
   editingTransactionId: null,
   defaultTransactionType: 'expense',
   mascotReactionTick: 0,
+  mascotCelebration: null,
   paydayRolledBanner: false,
 
   showToast: (item) => {
@@ -89,6 +97,8 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
 
   triggerMascotReaction: () =>
     set((state) => ({ mascotReactionTick: state.mascotReactionTick + 1 })),
+
+  setMascotCelebration: (celebration) => set({ mascotCelebration: celebration }),
 
   setPaydayRolledBanner: (visible) => set({ paydayRolledBanner: visible }),
 }));

@@ -122,7 +122,7 @@ export type HomeStateKind =
   | 'fresh'
   | 'normal';
 
-export type MascotMood = 'smile' | 'flat' | 'oops' | 'sleepy';
+export type MascotMood = 'smile' | 'flat' | 'oops' | 'sleepy' | 'cheer' | 'wink';
 
 export interface AllowanceCalculation {
   dailyAllowance: number;

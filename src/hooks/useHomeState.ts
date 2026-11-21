@@ -4,11 +4,13 @@ import { db, openDatabaseSafely } from '../data/db';
 import {
   checkAndRollPayday,
   mergeWithDefaultSettings,
+  updateSettings,
 } from '../data/repositories/settings';
 import { sortTopTemplates } from '../data/repositories/templates';
 import { DEFAULT_TEMPLATES, ensureSeeded } from '../data/seed';
 import { computeBalances, getHomeState } from '../domain/allowance';
 import { ALL_DEFAULT_CATEGORIES } from '../domain/parser/keywords';
+import { computeStreak, type StreakSummary } from '../domain/streak';
 import type {
   Budget,
   Category,
@@ -82,6 +84,7 @@ export interface AppLiveState {
   goals: Goal[];
   dayMarks: DayMark[];
   budgets: Budget[];
+  streak: StreakSummary;
   homeState: HomeStateResult;
 }
 
@@ -188,6 +191,28 @@ export function useHomeState(): AppLiveState {
     transactions: visibleTransactions,
   });
 
+  const dayMarks = queryData?.dayMarks ?? [];
+  const streak = computeStreak({
+    transactions: visibleTransactions,
+    dayMarks,
+    today: currentToday,
+  });
+
+  useEffect(() => {
+    if (
+      bootstrapReady &&
+      settings.hasOnboarded &&
+      streak.currentStreak < settings.lastCelebratedStreak
+    ) {
+      void updateSettings({ lastCelebratedStreak: streak.currentStreak });
+    }
+  }, [
+    bootstrapReady,
+    settings.hasOnboarded,
+    streak.currentStreak,
+    settings.lastCelebratedStreak,
+  ]);
+
   const homeState = getHomeState({
     today: currentToday,
     nextPayday: settings.nextPayday,
@@ -208,8 +233,9 @@ export function useHomeState(): AppLiveState {
     transactions: visibleTransactions,
     todayTransactions,
     goals: queryData?.goals ?? [],
-    dayMarks: queryData?.dayMarks ?? [],
+    dayMarks,
     budgets: queryData?.budgets ?? [],
+    streak,
     homeState,
   };
 }

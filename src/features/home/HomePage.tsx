@@ -13,7 +13,9 @@ import { useUIStore } from '../../hooks/useUIStore';
 import { HeroCard } from './HeroCard';
 import { QuickAddBar } from './QuickAddBar';
 import { QuickChips } from './QuickChips';
+import { StreakSheet } from './StreakSheet';
 import { TodayList } from './TodayList';
+import { markNoSpendTodayWithEffects } from '../transactions/postSaveEffects';
 
 interface HomePageProps {
   live: AppLiveState;
@@ -24,6 +26,7 @@ export function HomePage({ live }: HomePageProps) {
   const openTransactionSheet = useUIStore((s) => s.openTransactionSheet);
   const showToast = useUIStore((s) => s.showToast);
 
+  const [isStreakOpen, setIsStreakOpen] = useState(false);
   const [isAddTemplateOpen, setIsAddTemplateOpen] = useState(false);
   const [tplLabel, setTplLabel] = useState('');
   const [tplAmountRaw, setTplAmountRaw] = useState('');
@@ -86,6 +89,11 @@ export function HomePage({ live }: HomePageProps) {
       <QuickChips
         templates={live.topTemplates}
         today={live.today}
+        transactions={live.transactions}
+        dayMarks={live.dayMarks}
+        lastCelebratedStreak={live.settings.lastCelebratedStreak}
+        currentStreak={live.streak.currentStreak}
+        onOpenStreakSheet={() => setIsStreakOpen(true)}
         onAddTemplateClick={() => {
           setTplError(null);
           setIsAddTemplateOpen(true);
@@ -109,6 +117,23 @@ export function HomePage({ live }: HomePageProps) {
         openingDate={live.settings.openingDate}
         categories={live.categories}
         categoryMap={live.categoryMap}
+        transactions={live.transactions}
+        dayMarks={live.dayMarks}
+        lastCelebratedStreak={live.settings.lastCelebratedStreak}
+      />
+
+      <StreakSheet
+        open={isStreakOpen}
+        onClose={() => setIsStreakOpen(false)}
+        streak={live.streak}
+        onMarkNoSpendToday={() =>
+          markNoSpendTodayWithEffects({
+            transactions: live.transactions,
+            dayMarks: live.dayMarks,
+            lastCelebratedStreak: live.settings.lastCelebratedStreak,
+            today: live.today,
+          })
+        }
       />
 
       <Sheet

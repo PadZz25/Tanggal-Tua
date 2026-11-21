@@ -7,6 +7,7 @@ import { completeOnboarding, resetAllData } from '../../data/repositories/settin
 import { createTransaction } from '../../data/repositories/transactions';
 import { getHomeState } from '../../domain/allowance';
 import { DEFAULT_CATEGORIES } from '../../domain/parser/keywords';
+import { computeStreak } from '../../domain/streak';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { SummaryPage } from './SummaryPage';
 
@@ -44,6 +45,7 @@ function makeMockLive(overrides: Partial<AppLiveState> = {}): AppLiveState {
     goals: [],
     dayMarks: [],
     budgets: [],
+    streak: computeStreak({ transactions: [], dayMarks: [], today: '2026-11-18' }),
     homeState: getHomeState({
       today: '2026-11-18',
       nextPayday: '2026-12-01',

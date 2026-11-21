@@ -5,10 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
 import { Toast } from '../../components/ui/Toast';
 import { completeOnboarding, resetAllData } from '../../data/repositories/settings';
-import { getAllTransactions } from '../../data/repositories/transactions';
+import {
+  createTransaction,
+  getAllTransactions,
+} from '../../data/repositories/transactions';
 import { getHomeState } from '../../domain/allowance';
 import { DEFAULT_CATEGORIES } from '../../domain/parser/keywords';
 import { useUIStore } from '../../hooks/useUIStore';
+import { Mascot } from '../../components/brand/Mascot';
 import { HeroCard } from './HeroCard';
 import { QuickAddBar } from './QuickAddBar';
 
@@ -20,6 +24,7 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
       toast: null,
       isTransactionSheetOpen: false,
       editingTransactionId: null,
+      mascotCelebration: null,
       paydayRolledBanner: false,
     });
   });
@@ -285,5 +290,72 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
     expect(nav).toHaveAttribute('data-nav-hidden', 'false');
     expect(nav).not.toHaveClass('translate-y-full');
     expect(nav).not.toHaveClass('invisible');
+  });
+
+  it('opens StreakSheet from streak pill, marks no-spend day with undo, and celebrates milestone 3 once with cheer mascot', async () => {
+    const user = userEvent.setup();
+    await completeOnboarding({
+      openingBalance: 845_000,
+      openingDate: '2026-11-16',
+      nextPayday: '2026-12-01',
+      paydayDay: 1,
+      theme: 'light',
+    });
+
+    await createTransaction({
+      type: 'expense',
+      amount: 15_000,
+      categoryId: 'cat-makan',
+      note: 'Hari 1',
+      date: '2026-11-16',
+      source: 'quick',
+    });
+    await createTransaction({
+      type: 'expense',
+      amount: 15_000,
+      categoryId: 'cat-makan',
+      note: 'Hari 2',
+      date: '2026-11-17',
+      source: 'quick',
+    });
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    const pill = await screen.findByTestId('streak-pill');
+    expect(pill).toHaveTextContent('2 hari');
+
+    // Open StreakSheet and mark today as no_spend -> reaches streak 3 milestone!
+    await user.click(pill);
+    expect(screen.getByRole('heading', { name: 'Streak Mencatat' })).toBeInTheDocument();
+    expect(screen.getAllByText(/tercatat/i).length).toBeGreaterThanOrEqual(14);
+
+    await user.click(screen.getByRole('button', { name: 'Hari ini tidak ada pengeluaran' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('streak-pill')).toHaveTextContent('3 hari');
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Keren! Streak 3 hari berturut-turut.'
+      );
+      expect(screen.getByTestId('mascot-message')).toHaveTextContent(
+        'Keren! Streak 3 hari berturut-turut terjaga.'
+      );
+    });
+
+    // Re-open StreakSheet -> no_spend button is disabled because today is already logged
+    await user.click(screen.getByTestId('streak-pill'));
+    expect(
+      screen.getByRole('button', { name: 'Hari ini tidak ada pengeluaran' })
+    ).toBeDisabled();
+
+    // Render Mascot cheer & wink SVG expressions cleanly
+    const { container } = render(
+      <>
+        <Mascot mood="cheer" />
+        <Mascot mood="wink" />
+      </>
+    );
+    expect(container.querySelector('[data-mood="cheer"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-mood="wink"]')).toBeInTheDocument();
   });
 });

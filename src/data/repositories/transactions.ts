@@ -45,13 +45,15 @@ export async function updateTransaction(
   const existing = await db.transactions.get(id);
   if (!existing) return null;
 
+  const nextType = patch.type ?? existing.type;
   const updated: Transaction = {
     ...existing,
     ...patch,
     amount: patch.amount !== undefined ? Math.trunc(patch.amount) : existing.amount,
     note:
       patch.note !== undefined
-        ? patch.note.trim().slice(0, 80) || 'Pengeluaran'
+        ? patch.note.trim().slice(0, 80) ||
+          (nextType === 'income' ? 'Pemasukan' : 'Pengeluaran')
         : existing.note,
     updatedAt: new Date().toISOString(),
   };

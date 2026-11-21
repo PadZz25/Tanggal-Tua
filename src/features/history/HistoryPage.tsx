@@ -8,9 +8,9 @@ import {
 } from '../../data/repositories/transactions';
 import { UI_STRINGS } from '../../domain/copy';
 import {
+  formatDateRangeLabel,
   formatHistoryDayHeader,
   formatShortDate,
-  parseDateParts,
 } from '../../domain/dates';
 import { formatShort } from '../../domain/money';
 import type { Transaction } from '../../domain/types';
@@ -26,18 +26,10 @@ interface HistoryPageProps {
 type FilterKind = 'all' | 'expense' | 'income';
 
 const DATE_QUERY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const EN_DASH = '\u2013';
 
 function formatRangeChipLabel(dari: string | null, sampai: string | null): string {
   if (dari && sampai) {
-    const s = parseDateParts(dari);
-    const e = parseDateParts(sampai);
-    if (s.month === e.month && s.year === e.year) {
-      const endShort = formatShortDate(sampai);
-      const monthPart = endShort.split(' ')[1] ?? '';
-      return `${s.day}${EN_DASH}${e.day} ${monthPart}`;
-    }
-    return `${formatShortDate(dari)}${EN_DASH}${formatShortDate(sampai)}`;
+    return formatDateRangeLabel(dari, sampai);
   }
   if (dari) return `Dari ${formatShortDate(dari)}`;
   if (sampai) return `Sampai ${formatShortDate(sampai)}`;

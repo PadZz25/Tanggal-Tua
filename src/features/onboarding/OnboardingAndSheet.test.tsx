@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getSettings, resetAllData } from '../../data/repositories/settings';
-import { getAllTransactions } from '../../data/repositories/transactions';
+import {
+  createTransaction,
+  getAllTransactions,
+} from '../../data/repositories/transactions';
 import { DEFAULT_CATEGORIES } from '../../domain/parser/keywords';
 import { useUIStore } from '../../hooks/useUIStore';
 import { TransactionSheet } from '../transactions/TransactionSheet';
@@ -182,5 +185,47 @@ describe('Onboarding & TransactionSheet (Milestone M4)', () => {
     );
 
     expect(screen.getByLabelText(/Catatan/i)).toHaveValue('Soto spesial');
+  });
+
+  it('updates an existing transaction cleanly when submitting TransactionSheet in edit mode', async () => {
+    const user = userEvent.setup();
+    const existing = await createTransaction({
+      type: 'expense',
+      amount: 15_000,
+      categoryId: 'cat-makan',
+      note: 'Soto awal',
+      date: '2026-11-18',
+      source: 'form',
+    });
+
+    useUIStore.setState({
+      isTransactionSheetOpen: true,
+      editingTransactionId: existing.id,
+      defaultTransactionType: 'expense',
+    });
+
+    render(
+      <TransactionSheet
+        today="2026-11-18"
+        openingDate="2026-11-01"
+        categories={DEFAULT_CATEGORIES}
+        transactions={[existing]}
+      />
+    );
+
+    const amountField = screen.getByLabelText('Nominal');
+    const noteField = screen.getByLabelText(/Catatan/i);
+    await user.clear(amountField);
+    await user.type(amountField, '22rb');
+    await user.clear(noteField);
+    await user.type(noteField, 'Soto komplit');
+    await user.click(screen.getByRole('button', { name: 'Simpan' }));
+
+    await waitFor(async () => {
+      const all = await getAllTransactions();
+      expect(all).toHaveLength(1);
+      expect(all[0].amount).toBe(22_000);
+      expect(all[0].note).toBe('Soto komplit');
+    });
   });
 });

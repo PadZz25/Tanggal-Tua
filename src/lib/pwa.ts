@@ -101,11 +101,9 @@ export function initPwaSupport(): void {
     updateSnapshot();
   });
 
-  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-    const swUrl = import.meta.env.PROD ? '/sw.js' : '/dev-sw.js';
-
+  if (import.meta.env.PROD && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     navigator.serviceWorker
-      .register(swUrl, { scope: '/' })
+      .register('/sw.js', { scope: '/' })
       .then((registration) => {
         swRegistered = true;
         if (registration.waiting) {
@@ -129,18 +127,7 @@ export function initPwaSupport(): void {
 
         updateSnapshot();
       })
-      .catch(() => {
-        // Fallback to dev-sw.js if sw.js was not built yet
-        if (swUrl !== '/dev-sw.js') {
-          navigator.serviceWorker
-            .register('/dev-sw.js', { scope: '/' })
-            .then(() => {
-              swRegistered = true;
-              updateSnapshot();
-            })
-            .catch(() => {});
-        }
-      });
+      .catch(() => {});
 
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {

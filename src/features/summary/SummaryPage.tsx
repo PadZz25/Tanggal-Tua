@@ -212,14 +212,14 @@ export function SummaryPage({ live }: SummaryPageProps) {
               </p>
             </div>
 
-            <div className="mt-3.5 grid grid-cols-3 gap-2 border-t border-[var(--border-soft)] pt-3">
+            <div className="mt-3.5 grid grid-cols-2 gap-3 border-t border-[var(--border-soft)] pt-3 sm:grid-cols-3">
               <div>
                 <p className="text-[11px] font-bold text-[var(--muted)]">
                   {UI_STRINGS.summaryTotalIncome}
                 </p>
                 <p
                   data-testid="summary-total-income"
-                  className="tabular-nums mt-0.5 text-[14px] font-extrabold text-[var(--ink)]"
+                  className="tabular-nums mt-0.5 whitespace-nowrap text-[14px] font-extrabold text-[var(--ink)]"
                 >
                   {formatFull(currentSummary.totalIncome)}
                 </p>
@@ -230,7 +230,7 @@ export function SummaryPage({ live }: SummaryPageProps) {
                 </p>
                 <p
                   data-testid="summary-net"
-                  className="tabular-nums mt-0.5 text-[14px] font-extrabold text-[var(--ink)]"
+                  className="tabular-nums mt-0.5 whitespace-nowrap text-[14px] font-extrabold text-[var(--ink)]"
                 >
                   {formattedNet}
                 </p>
@@ -241,7 +241,7 @@ export function SummaryPage({ live }: SummaryPageProps) {
                 </p>
                 <p
                   data-testid="summary-avg-per-day"
-                  className="tabular-nums mt-0.5 text-[14px] font-extrabold text-[var(--ink)]"
+                  className="tabular-nums mt-0.5 whitespace-nowrap text-[14px] font-extrabold text-[var(--ink)]"
                 >
                   {formatFull(currentSummary.avgPerDay)}
                 </p>

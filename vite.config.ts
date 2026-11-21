@@ -26,15 +26,6 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       injectRegister: null,
-      includeAssets: [
-        'favicon.svg',
-        'icons/icon-192.png',
-        'icons/icon-512.png',
-        'icons/maskable-512.png',
-        'icons/apple-touch-icon.png',
-        'icons/screenshot-narrow.png',
-        'icons/screenshot-wide.png',
-      ],
       manifest: {
         id: '/',
         name: 'Tanggal Tua',

@@ -1,4 +1,10 @@
-import { addDays, daysBetween, daysInMonth, formatShortDate, parseDateParts } from './dates';
+import {
+  addDays,
+  daysBetween,
+  daysInMonth,
+  formatDateRangeLabel,
+  parseDateParts,
+} from './dates';
 import { formatHeroShort } from './money';
 import type { Transaction } from './types';
 
@@ -56,21 +62,8 @@ const MONTHS_FULL_ID = [
   'Desember',
 ] as const;
 
-const EN_DASH = '\u2013';
-
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
-}
-
-function formatWeekLabel(start: string, end: string): string {
-  const s = parseDateParts(start);
-  const e = parseDateParts(end);
-  if (s.month === e.month && s.year === e.year) {
-    const endShort = formatShortDate(end);
-    const monthPart = endShort.split(' ')[1] ?? '';
-    return `${s.day}${EN_DASH}${e.day} ${monthPart}`;
-  }
-  return `${formatShortDate(start)}${EN_DASH}${formatShortDate(end)}`;
 }
 
 export function getPeriodRange(kind: PeriodKind, anchorDate: string): PeriodRange {
@@ -100,7 +93,7 @@ export function getPeriodRange(kind: PeriodKind, anchorDate: string): PeriodRang
     kind: 'week',
     start,
     end,
-    label: formatWeekLabel(start, end),
+    label: formatDateRangeLabel(start, end),
   };
 }
 

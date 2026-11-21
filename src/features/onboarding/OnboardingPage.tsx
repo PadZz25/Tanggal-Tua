@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { Wordmark } from '../../components/brand/Wordmark';
+import { HeroAmountText } from '../home/HeroCard';
 import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
 import { PaydayScheduleControl } from '../../components/ui/PaydayScheduleControl';
 import { completeOnboarding } from '../../data/repositories/settings';
@@ -399,18 +400,9 @@ export function OnboardingPage({
                 style={{ fontVariantNumeric: 'proportional-nums' }}
                 className="mt-1 text-[48px] font-extrabold leading-none tracking-[-1.5px]"
               >
-                {(() => {
-                  const formatted = formatHeroShort(previewAllowance.dailyAllowance);
-                  const idx = formatted.indexOf(',');
-                  if (idx === -1) return formatted;
-                  return (
-                    <>
-                      {formatted.slice(0, idx)}
-                      <span className="-mx-[0.06em] inline-block">,</span>
-                      {formatted.slice(idx + 1)}
-                    </>
-                  );
-                })()}
+                <HeroAmountText
+                  value={formatHeroShort(previewAllowance.dailyAllowance)}
+                />
               </p>
               <p className="mt-2 text-[13px] font-medium opacity-90">
                 Dari saldo {formatFull(parsedBalance ?? 0)} untuk {daysLeft} hari ke depan

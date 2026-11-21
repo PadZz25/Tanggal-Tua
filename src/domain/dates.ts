@@ -16,6 +16,7 @@ const MONTHS_SHORT_ID = [
 ] as const;
 
 const DAYS_SHORT_ID = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] as const;
+const EN_DASH = '\u2013';
 
 export const WEEKDAY_OPTIONS: ReadonlyArray<{
   value: PaydayWeekday;
@@ -117,6 +118,16 @@ export function formatWeekdayShortDate(dateStr: string): string {
   const weekday = getIsoWeekday(dateStr);
   const fullName = WEEKDAY_OPTIONS[weekday - 1]?.full ?? '';
   return `${fullName}, ${formatShortDate(dateStr)}`;
+}
+
+export function formatDateRangeLabel(start: string, end: string): string {
+  const s = parseDateParts(start);
+  const e = parseDateParts(end);
+  if (s.month === e.month && s.year === e.year) {
+    const monthPart = formatShortDate(end).split(' ')[1] ?? '';
+    return `${s.day}${EN_DASH}${e.day} ${monthPart}`;
+  }
+  return `${formatShortDate(start)}${EN_DASH}${formatShortDate(end)}`;
 }
 
 export function rollPayday(

@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { UI_STRINGS } from '../../domain/copy';
-import { formatShortDate, parseDateParts } from '../../domain/dates';
+import {
+  formatShortDate,
+  formatWeekdayShortDate,
+  getIsoWeekday,
+  parseDateParts,
+  WEEKDAY_OPTIONS,
+} from '../../domain/dates';
 import { formatFull, formatHeroShort } from '../../domain/money';
 import type { DailyTotal, PeriodKind } from '../../domain/summary';
 
@@ -10,27 +16,10 @@ interface DailyExpenseChartProps {
   dailyTotals: DailyTotal[];
 }
 
-const WEEKDAY_SHORT_ID = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] as const;
-const WEEKDAY_FULL_ID = [
-  'Minggu',
-  'Senin',
-  'Selasa',
-  'Rabu',
-  'Kamis',
-  'Jumat',
-  'Sabtu',
-] as const;
-
 const MONTH_LABELED_DAYS = new Set([1, 5, 10, 15, 20, 25, 30]);
 
-function getWeekdayIndex(dateStr: string): number {
-  const { year, month, day } = parseDateParts(dateStr);
-  return new Date(year, month - 1, day).getDay();
-}
-
 function formatSelectedDayCaption(item: DailyTotal): string {
-  const weekday = WEEKDAY_FULL_ID[getWeekdayIndex(item.date)];
-  return `${weekday}, ${formatShortDate(item.date)} · ${formatHeroShort(item.expense)}`;
+  return `${formatWeekdayShortDate(item.date)} · ${formatHeroShort(item.expense)}`;
 }
 
 function pickInitialSelectedDate(dailyTotals: DailyTotal[], today: string): string {
@@ -97,7 +86,7 @@ export function DailyExpenseChart({
 
           const axisLabel =
             kind === 'week'
-              ? WEEKDAY_SHORT_ID[getWeekdayIndex(item.date)]
+              ? WEEKDAY_OPTIONS[getIsoWeekday(item.date) - 1]?.short ?? ''
               : MONTH_LABELED_DAYS.has(day)
                 ? String(day)
                 : '';

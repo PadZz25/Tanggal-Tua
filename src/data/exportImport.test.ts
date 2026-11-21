@@ -1,8 +1,18 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { exportToCsv, exportToJson, importFromJson, UTF8_BOM } from './exportImport';
 import { completeOnboarding, getSettings, resetAllData } from './repositories/settings';
-import { applyTemplateQuickTap, getAllTemplates, sortTopTemplates } from './repositories/templates';
-import { createTransaction, getAllTransactions } from './repositories/transactions';
+import {
+  applyTemplateQuickTap,
+  createTemplate,
+  getAllTemplates,
+  revertTemplateQuickTap,
+  sortTopTemplates,
+} from './repositories/templates';
+import {
+  createTransaction,
+  getAllTransactions,
+  updateTransaction,
+} from './repositories/transactions';
 import { ensureSeeded } from './seed';
 
 describe('Data layer & Export/Import (Milestone M2)', () => {
@@ -222,5 +232,38 @@ describe('Data layer & Export/Import (Milestone M2)', () => {
     const csv = await exportToCsv();
     expect(csv).toContain(",'=SUM(A1:A5)");
     expect(csv).toContain(",-5000,Koreksi saldo,'+koreksi manual");
+  });
+
+  it('runs applyTemplateQuickTap/revert atomically, enforces TemplateSchema, and preserves Pemasukan fallback on updateTransaction', async () => {
+    const tap = await applyTemplateQuickTap({
+      templateId: 'tpl-kopi',
+      date: '2026-11-18',
+    });
+    expect(tap.previousUsageCount).toBe(0);
+    expect((await getAllTemplates()).find((t) => t.id === 'tpl-kopi')?.usageCount).toBe(1);
+    expect(await getAllTransactions()).toHaveLength(1);
+
+    await revertTemplateQuickTap({
+      templateId: 'tpl-kopi',
+      transactionId: tap.transaction.id,
+      previousUsageCount: tap.previousUsageCount,
+    });
+    expect((await getAllTemplates()).find((t) => t.id === 'tpl-kopi')?.usageCount).toBe(0);
+    expect(await getAllTransactions()).toHaveLength(0);
+
+    await expect(
+      createTemplate({ label: 'Gratis', amount: 0, categoryId: 'cat-jajan' })
+    ).rejects.toThrow();
+
+    const incomeTx = await createTransaction({
+      type: 'income',
+      amount: 100_000,
+      categoryId: 'cat-gaji-freelance',
+      note: 'Honor awal',
+      date: '2026-11-18',
+      source: 'form',
+    });
+    const updatedIncome = await updateTransaction(incomeTx.id, { note: '   ' });
+    expect(updatedIncome?.note).toBe('Pemasukan');
   });
 });

@@ -62,7 +62,7 @@ function useAnimatedAmount(target: number): number {
   return displayValue;
 }
 
-function HeroAmountText({ value }: { value: string }) {
+export function HeroAmountText({ value }: { value: string }) {
   const commaIndex = value.indexOf(',');
   if (commaIndex === -1) return <>{value}</>;
   return (

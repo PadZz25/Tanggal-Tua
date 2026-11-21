@@ -16,7 +16,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/|icons/|manifest\\.webmanifest|sw\\.js|dev-sw\\.js|workbox-.*|favicon\\.svg).*)",
+      "source": "/((?!assets/|icons/|manifest\\.webmanifest|sw\\.js|workbox-.*|favicon\\.svg).*)",
       "destination": "/index.html"
     }
   ]

@@ -1,5 +1,6 @@
 import type { Template, Transaction } from '../../domain/types';
 import { db } from '../db';
+import { TemplateSchema } from '../schemas';
 import { createTransaction } from './transactions';
 
 export async function getAllTemplates(): Promise<Template[]> {
@@ -32,6 +33,7 @@ export async function createTemplate(input: {
     order: minOrder - 1,
     usageCount: 0,
   };
+  TemplateSchema.parse(template);
   await db.templates.put(template);
   return template;
 }
@@ -45,8 +47,10 @@ export async function updateTemplate(
   const updated: Template = {
     ...existing,
     ...patch,
+    amount: patch.amount !== undefined ? Math.trunc(patch.amount) : existing.amount,
     label: patch.label !== undefined ? patch.label.trim().slice(0, 40) : existing.label,
   };
+  TemplateSchema.parse(updated);
   await db.templates.put(updated);
   return updated;
 }
@@ -74,24 +78,26 @@ export async function applyTemplateQuickTap(params: {
   templateId: string;
   date: string;
 }): Promise<{ transaction: Transaction; previousUsageCount: number }> {
-  const tpl = await db.templates.get(params.templateId);
-  if (!tpl) {
-    throw new Error('Template tidak ditemukan');
-  }
+  return db.transaction('rw', db.templates, db.transactions, async () => {
+    const tpl = await db.templates.get(params.templateId);
+    if (!tpl) {
+      throw new Error('Template tidak ditemukan');
+    }
 
-  const previousUsageCount = tpl.usageCount;
-  await db.templates.update(tpl.id, { usageCount: previousUsageCount + 1 });
+    const previousUsageCount = tpl.usageCount;
+    await db.templates.update(tpl.id, { usageCount: previousUsageCount + 1 });
 
-  const transaction = await createTransaction({
-    type: 'expense',
-    amount: tpl.amount,
-    categoryId: tpl.categoryId,
-    note: tpl.label,
-    date: params.date,
-    source: 'template',
+    const transaction = await createTransaction({
+      type: 'expense',
+      amount: tpl.amount,
+      categoryId: tpl.categoryId,
+      note: tpl.label,
+      date: params.date,
+      source: 'template',
+    });
+
+    return { transaction, previousUsageCount };
   });
-
-  return { transaction, previousUsageCount };
 }
 
 export async function revertTemplateQuickTap(params: {

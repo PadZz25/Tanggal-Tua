@@ -58,15 +58,18 @@ export async function loadAppSnapshot(currentToday: string): Promise<LoadedAppSn
     db.budgets.toArray(),
   ]);
 
+  const hasSettingsRow = rawSettings !== undefined;
+
   return {
     settings: mergeWithDefaultSettings(rawSettings, currentToday),
     categories: rawCategories.length > 0 ? rawCategories : ALL_DEFAULT_CATEGORIES,
-    templates: rawTemplates.length > 0 ? rawTemplates : DEFAULT_TEMPLATES,
+    templates:
+      rawTemplates.length > 0 || hasSettingsRow ? rawTemplates : DEFAULT_TEMPLATES,
     allTransactions,
     goals,
     dayMarks,
     budgets,
-    hasSettingsRow: rawSettings !== undefined,
+    hasSettingsRow,
   };
 }
 
@@ -170,8 +173,9 @@ export function useHomeState(): AppLiveState {
     queryData?.categories && queryData.categories.length > 0
       ? queryData.categories
       : ALL_DEFAULT_CATEGORIES;
+  const hasSettingsRow = queryData?.hasSettingsRow ?? false;
   const templates =
-    queryData?.templates && queryData.templates.length > 0
+    queryData?.templates && (queryData.templates.length > 0 || hasSettingsRow)
       ? queryData.templates
       : DEFAULT_TEMPLATES;
 

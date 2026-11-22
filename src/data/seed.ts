@@ -69,12 +69,12 @@ export async function ensureSeeded(currentToday: string = today()): Promise<void
       }
     }
 
+    const mainSettings = await db.settings.get('main');
     const templateCount = await db.templates.count();
-    if (templateCount === 0) {
+    if (!mainSettings && templateCount === 0) {
       await db.templates.bulkPut(DEFAULT_TEMPLATES);
     }
 
-    const mainSettings = await db.settings.get('main');
     if (!mainSettings) {
       await db.settings.put(createDefaultSettings(currentToday));
     }

@@ -8,6 +8,8 @@ interface StreakSheetProps {
   onClose: () => void;
   streak: StreakSummary;
   onMarkNoSpendToday: () => Promise<void>;
+  hasTodayNoSpendMark?: boolean;
+  onRemoveNoSpendToday?: () => Promise<void>;
 }
 
 export function StreakSheet({
@@ -15,6 +17,8 @@ export function StreakSheet({
   onClose,
   streak,
   onMarkNoSpendToday,
+  hasTodayNoSpendMark = false,
+  onRemoveNoSpendToday,
 }: StreakSheetProps) {
   const isBroken = streak.currentStreak === 0 && streak.longestStreak > 0;
 
@@ -33,6 +37,12 @@ export function StreakSheet({
 
   const handleMarkClick = async () => {
     await onMarkNoSpendToday();
+    onClose();
+  };
+
+  const handleRemoveClick = async () => {
+    if (!onRemoveNoSpendToday) return;
+    await onRemoveNoSpendToday();
     onClose();
   };
 
@@ -133,6 +143,16 @@ export function StreakSheet({
           <p className="text-center text-[12px] font-medium text-[var(--muted)]">
             Hari ini sudah tercatat di streakmu.
           </p>
+        )}
+
+        {hasTodayNoSpendMark && onRemoveNoSpendToday && (
+          <button
+            type="button"
+            onClick={() => void handleRemoveClick()}
+            className="min-h-[44px] w-full rounded-[20px] border border-[var(--border-control)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--ink)] hover:bg-[var(--border-soft)]"
+          >
+            Batalkan penanda hari ini
+          </button>
         )}
       </div>
     </Sheet>

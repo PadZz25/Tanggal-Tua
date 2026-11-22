@@ -28,6 +28,7 @@ import {
   createTemplate,
   deleteTemplate,
   reorderTemplate,
+  restoreTemplate,
   updateTemplate,
 } from '../../data/repositories/templates';
 import { createBalanceAdjustment } from '../../data/repositories/transactions';
@@ -557,64 +558,79 @@ export function SettingsPage({ live }: SettingsPageProps) {
           </button>
         </div>
 
-        <ul className="mt-3 divide-y divide-[var(--border-soft)]">
-          {live.templates.map((tpl, index) => (
-            <li
-              key={tpl.id}
-              className="flex min-h-[54px] items-center justify-between gap-2 py-2"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-[14px] font-bold text-[var(--ink)]">
-                  {tpl.label} ·{' '}
-                  <span className="tabular-nums text-[var(--primary)]">
-                    {formatShort(tpl.amount)}
-                  </span>
-                </p>
-                <p className="text-[12px] text-[var(--muted)]">
-                  {live.categoryMap.get(tpl.categoryId)?.name ?? 'Lainnya'} · dipakai{' '}
-                  {tpl.usageCount}x
-                </p>
-              </div>
+        {live.templates.length === 0 ? (
+          <p className="mt-3 text-[13px] font-medium text-[var(--muted)]">
+            Belum ada template. Ketuk Tambah untuk membuat pintasan catat cepat.
+          </p>
+        ) : (
+          <ul className="mt-3 divide-y divide-[var(--border-soft)]">
+            {live.templates.map((tpl, index) => (
+              <li
+                key={tpl.id}
+                className="flex min-h-[54px] items-center justify-between gap-2 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-bold text-[var(--ink)]">
+                    {tpl.label} ·{' '}
+                    <span className="tabular-nums text-[var(--primary)]">
+                      {formatShort(tpl.amount)}
+                    </span>
+                  </p>
+                  <p className="text-[12px] text-[var(--muted)]">
+                    {live.categoryMap.get(tpl.categoryId)?.name ?? 'Lainnya'} · dipakai{' '}
+                    {tpl.usageCount}x
+                  </p>
+                </div>
 
-              <div className="flex shrink-0 items-center gap-1">
-                <button
-                  type="button"
-                  disabled={index === 0}
-                  onClick={() => void reorderTemplate(tpl.id, 'up')}
-                  aria-label={`Geser template ${tpl.label} ke atas`}
-                  className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--ink)] disabled:opacity-30"
-                >
-                  <ArrowUp size={16} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  disabled={index === live.templates.length - 1}
-                  onClick={() => void reorderTemplate(tpl.id, 'down')}
-                  aria-label={`Geser template ${tpl.label} ke bawah`}
-                  className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--ink)] disabled:opacity-30"
-                >
-                  <ArrowDown size={16} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openEditTemplate(tpl)}
-                  aria-label={`Ubah template ${tpl.label}`}
-                  className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--ink)]"
-                >
-                  <Pencil size={16} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void deleteTemplate(tpl.id)}
-                  aria-label={`Hapus template ${tpl.label}`}
-                  className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--warm-ink)]"
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => void reorderTemplate(tpl.id, 'up')}
+                    aria-label={`Geser template ${tpl.label} ke atas`}
+                    className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--ink)] disabled:opacity-30"
+                  >
+                    <ArrowUp size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === live.templates.length - 1}
+                    onClick={() => void reorderTemplate(tpl.id, 'down')}
+                    aria-label={`Geser template ${tpl.label} ke bawah`}
+                    className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--ink)] disabled:opacity-30"
+                  >
+                    <ArrowDown size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openEditTemplate(tpl)}
+                    aria-label={`Ubah template ${tpl.label}`}
+                    className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--ink)]"
+                  >
+                    <Pencil size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void deleteTemplate(tpl.id).then(() => {
+                        showToast({
+                          message: `Template ${tpl.label} dihapus`,
+                          onUndo: async () => {
+                            await restoreTemplate(tpl);
+                          },
+                        });
+                      });
+                    }}
+                    aria-label={`Hapus template ${tpl.label}`}
+                    className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--warm-ink)]"
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* 4b. Pengingat Harian */}

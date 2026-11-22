@@ -59,6 +59,11 @@ export async function deleteTemplate(id: string): Promise<void> {
   await db.templates.delete(id);
 }
 
+export async function restoreTemplate(template: Template): Promise<void> {
+  TemplateSchema.parse(template);
+  await db.templates.put(template);
+}
+
 export async function reorderTemplate(id: string, direction: 'up' | 'down'): Promise<void> {
   const all = await getAllTemplates();
   const index = all.findIndex((t) => t.id === id);

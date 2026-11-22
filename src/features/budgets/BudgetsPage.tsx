@@ -142,12 +142,20 @@ export function BudgetsPage({ live }: BudgetsPageProps) {
 
   const handleDelete = async () => {
     if (!editingBudget) return;
+    const deleted = editingBudget;
     const catName =
-      live.categoryMap.get(editingBudget.categoryId)?.name ?? 'Kategori';
-    await deleteBudget(editingBudget.categoryId);
+      live.categoryMap.get(deleted.categoryId)?.name ?? 'Kategori';
+    await deleteBudget(deleted.categoryId);
     setIsSheetOpen(false);
     showToast({
       message: `Anggaran ${catName} dihapus (riwayat transaksi tetap aman)`,
+      onUndo: async () => {
+        await upsertBudget({
+          categoryId: deleted.categoryId,
+          period: deleted.period,
+          amount: deleted.amount,
+        });
+      },
     });
   };
 

@@ -6,6 +6,7 @@ import { IosInstallGuide } from '../../components/ui/IosInstallGuide';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Sheet } from '../../components/ui/Sheet';
 import { exportToJson } from '../../data/exportImport';
+import { markNoSpendDay, removeDayMark } from '../../data/repositories/dayMarks';
 import { updateSettings } from '../../data/repositories/settings';
 import { createTemplate } from '../../data/repositories/templates';
 import { pickHomeBanner, shouldShowBackupReminder } from '../../domain/banners';
@@ -397,6 +398,7 @@ export function HomePage({ live }: HomePageProps) {
         open={isStreakOpen}
         onClose={() => setIsStreakOpen(false)}
         streak={live.streak}
+        hasTodayNoSpendMark={live.dayMarks.some((m) => m.date === live.today)}
         onMarkNoSpendToday={() =>
           markNoSpendTodayWithEffects({
             transactions: live.transactions,
@@ -405,6 +407,15 @@ export function HomePage({ live }: HomePageProps) {
             today: live.today,
           })
         }
+        onRemoveNoSpendToday={async () => {
+          await removeDayMark(live.today);
+          showToast({
+            message: 'Penanda hari tanpa pengeluaran dihapus',
+            onUndo: async () => {
+              await markNoSpendDay(live.today);
+            },
+          });
+        }}
       />
 
       <Sheet

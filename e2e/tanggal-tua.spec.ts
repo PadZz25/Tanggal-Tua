@@ -1,4 +1,16 @@
 import { expect, test } from '@playwright/test';
+import { attachZeroThirdPartyGuard } from './helpers';
+
+let verifyZeroThirdParty: (() => void) | null = null;
+
+test.beforeEach(({ page }) => {
+  verifyZeroThirdParty = attachZeroThirdPartyGuard(page);
+});
+
+test.afterEach(() => {
+  verifyZeroThirdParty?.();
+  verifyZeroThirdParty = null;
+});
 
 async function completeInitialOnboarding(
   page: import('@playwright/test').Page,
@@ -105,7 +117,7 @@ test.describe('Tanggal Tua E2E Flows (0.3.0 Tugas 5)', () => {
     await completeInitialOnboarding(page);
 
     await page.getByRole('link', { name: 'Pengaturan' }).click();
-    await expect(page.getByText(/Versi 0\.3\.1/i)).toBeVisible();
+    await expect(page.getByText(/Versi 1\.0\.0/i)).toBeVisible();
 
     const darkRadio = page.getByRole('radio', { name: 'Gelap' });
     await darkRadio.click();

@@ -3,6 +3,21 @@
 Seluruh perubahan penting pada proyek **Tanggal Tua** dicatat di dokumen ini.
 Format mengacu pada [Keep a Changelog](https://keepachangelog.com/id/1.1.0/), dan penomoran versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.0.0] - 2026-11-22
+
+### Added
+- Kartu **Insight** berbasis aturan pada Ringkasan (`R4 -> R1 -> R2 -> R3`, maks 3) lengkap dengan kontrol aksesibel **"Kenapa muncul?"** dan perbandingan adil terhadap periode sebelumnya.
+- **Streak mencatat ramah** di Beranda (`StreakSheet` 14 hari terakhir), penanda **"Hari ini tidak ada pengeluaran"** (`dayMarks`) dengan undo, serta ekspresi maskot Receh baru (`cheer` dan `wink`) pada tonggak 3, 7, 14, 30, 60, dan 100 hari.
+- Fitur **Target tabungan** (`/target` dan `/target/:id`, lazy-loaded) hingga 3 target aktif sekaligus dengan proyeksi tabungan harian, setor/tarik dana atomik, tandai terbeli, dan arsip dengan pengembalian otomatis ke saldo bebas.
+- Fitur **Anggaran per kategori** (`/anggaran`, lazy-loaded) berbasis minggu/bulan kalender dengan toast saat melewati ambang 80%/100%, baris peringatan Beranda, dan kartu 3 teratas di Ringkasan.
+- **Pengingat harian lokal** dalam aplikasi (saat jam pilihan terlewati dan hari ini belum tercatat), tombol unduh jadwal berulang **Tambah ke kalender** (`.ics` offline), serta dua **shortcut ikon** PWA (`"Catat pengeluaran"` ke `/?aksi=catat` dan `"Ringkasan"` ke `/ringkasan`).
+- **Pengingat cadangan** JSON 30 hari (> 10 transaksi, tunda 7 hari), status cadangan terakhir di Pengaturan, **panduan instal Safari iOS** (ikon inline + kartu satu kali yang bisa ditutup), serta pemanggilan `navigator.storage.persist()` dengan indikator status **Penyimpanan permanen** di Pengaturan -> Tentang.
+
+### Changed
+- Perhitungan `spentToday` dan seluruh agregat belanja/pemasukan pada Ringkasan kini mengecualikan transaksi bertaut target tabungan (`goalId != null`), sementara transaksi tersebut tetap memengaruhi `currentBalance` dan menampilkan label **Tabungan** tanpa akses ubah/hapus langsung di Riwayat.
+- Skema database lokal dinaikkan melalui satu migrasi gabungan **Dexie v2** (`goals`, `dayMarks`, `budgets`, indeks `goalId`, `isSystem`, dan 5 bidang pengaturan baru) lengkap dengan layar cadangan darurat jika upgrade gagal.
+- Aturan **banner Beranda tunggal** berbasis prioritas (`kiriman > pengingat harian > anggaran > panduan iOS > cadangan`) agar layar utama tetap lega pada ponsel.
+
 ## [0.3.1] - 2026-11-21
 
 ### Added

@@ -12,4 +12,5 @@ npm-debug.log*
 pnpm-debug.log*
 .vite
 *.tsbuildinfo
+graphify-out/
 TANGGAL-TUA-SPEC.md

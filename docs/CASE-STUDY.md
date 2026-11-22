@@ -48,8 +48,8 @@ Aplikasi dibangun dengan batas ketergantungan searah yang ketat:
   - JS Awal: **141.93 kB** gzip (batas ~150 kB); lazy chunks 2.03–6.86 kB gzip.
   - Lighthouse Mobile: Performance **98** (`FCP 0.8 s`, `LCP 2.4 s`, `CLS 0.001`, `TBT 80 ms`), Accessibility **100**, Best Practices **100**.
 - **Pertahanan Berkelanjutan:**
-  - Unit & komponen test (Vitest + Testing Library) mencakup kalkulasi finansial, migrasi v1->v2, kontras semua token warna CSS, snapshot `.ics`, dan interaksi UI.
-  - Pengujian E2E (Playwright) memblokir seluruh permintaan ke origin pihak ketiga, menjalankan `@axe-core/playwright` di kedua tema, dan mensimulasikan pembaruan dari data Dexie v1, kegagalan migrasi, pergeseran jam, serta mode offline penuh.
+  - Unit & komponen test (Vitest + Testing Library): **27 berkas (220 test)** mencakup kalkulasi finansial, migrasi v1->v2, 60 pengecekan kontras token CSS, snapshot `.ics`, dan interaksi UI.
+  - Pengujian E2E (Playwright): **13 skenario penuh** memblokir seluruh permintaan ke origin pihak ketiga, menghasilkan **0 pelanggaran serius/kritis** pada pemindaian `@axe-core/playwright` di kedua tema untuk seluruh 7 rute, serta menguji pembaruan dari data Dexie v1, kegagalan migrasi, pergeseran jam, dan mode offline penuh.
 
 ## 7. Langkah Berikutnya
 

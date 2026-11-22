@@ -97,21 +97,21 @@ Bagian ini menjelaskan *mengapa* keputusan produk diambil, agar agent tidak "mem
 | F9 | PWA offline | Bisa diinstal, berfungsi penuh offline, font di-host sendiri. |
 | F10 | Export/Import | JSON penuh (berversi) dan CSV transaksi. |
 | F11 | Ringkasan (0.3.0) | Ringkasan mingguan/bulanan, chart donut per kategori, chart batang harian, perbandingan adil periode lalu, serta filter kategori+rentang di Riwayat. |
+| F12 | Insight (1.0.0) | Kartu 1-3 insight berbasis aturan (`R4 -> R1 -> R2 -> R3`) pada Ringkasan dengan kontrol aksesibel "Kenapa muncul?". |
+| F13 | Streak & dayMark (1.0.0) | Pil streak ramah + kalender 14 hari + penanda "Hari ini tidak ada pengeluaran" dengan Undo. |
+| F14 | Target tabungan (1.0.0) | Hingga 3 target aktif (`/target`, `/target/:id`), proyeksi harian, setor/tarik atomik, tandai terbeli, arsip dengan pengembalian saldo otomatis. |
+| F15 | Anggaran kategori (1.0.0) | Batas mingguan/bulanan per kategori (`/anggaran`), toast ambang 80%/100%, peringatan Beranda, ringkasan 3 teratas. |
+| F16 | Pengingat, shortcut & pelindung data (1.0.0) | Pengingat lokal + ekspor kalender `.ics`, shortcut ikon (`/?aksi=catat`, `/ringkasan`), pengingat backup 30 hari, panduan iOS, status penyimpanan permanen. |
 
-### 4.2 P1 — setelah MVP stabil
+### 4.2 Pasca-1.0.0 (MINOR terencana, bukan bagian 1.0.0)
 - **Patungan dan utang teman** (catat "Budi utang 35rb", tandai lunas, bagi tagihan rata).
-- Transaksi berulang (gaji, cicilan, langganan).
-- Kategori kustom (nama, ikon, warna).
-- Pencarian di riwayat.
-- Streak mencatat yang ramah (tanpa hukuman).
-- Insight berbasis aturan yang bisa dijelaskan dengan angka ("Jajan minggu ini naik 20% dari minggu lalu: Rp 120rb vs Rp 100rb").
-- Pengingat backup (setiap 30 hari tanpa export).
-- Tata letak desktop (kolom tengah maksimum 480px).
-- Pemisahan beberapa nominal dalam satu input ("es teh 4rb dan parkir 2rb").
-- Tema warna tambahan dan variasi ekspresi maskot.
+- Transaksi berulang / tagihan terjadwal.
+- Kategori kustom dan pencarian riwayat.
+- Banyak dompet, kunci app, laporan PDF, serta pemisahan multi-nominal dalam satu input ("es teh 4rb dan parkir 2rb").
+- Tata letak desktop dan variasi tema warna tambahan.
 
-### 4.3 P2 — opsional
-- Input suara (Web Speech API, `id-ID`) yang diumpankan ke parser yang sama.
+### 4.3 P2 (opsional / ditunda)
+- Input suara (Web Speech API, `id-ID` atau mode lokal + parser angka berbentuk kata) yang diumpankan ke parser yang sama.
 - Dashboard modular (widget bisa disematkan).
 - Sinkronisasi opsional antar perangkat (end-to-end encrypted) dan enkripsi data lokal dengan passphrase.
 - Insight berbantuan AI yang menjelaskan alasannya.
@@ -133,8 +133,10 @@ Bagian ini menjelaskan *mengapa* keputusan produk diambil, agar agent tidak "mem
 - `today` = tanggal lokal perangkat saat ini.
 - `nextPayday` = tanggal kiriman/gajian berikutnya (`YYYY-MM-DD`).
 - `daysLeft = nextPayday − today` dalam hari kalender. Hari ini dihitung, hari kiriman tidak dihitung. Contoh: 18 Nov → 1 Des = **13 hari**.
-- `currentBalance = openingBalance + Σincome + Σadjustment − Σexpense` (semua transaksi, yang tanggalnya ≥ `openingDate`).
-- `spentToday = Σ expense` dengan `date == today` (income dan adjustment tidak dihitung).
+- `currentBalance = openingBalance + Σincome + Σadjustment − Σexpense` (semua transaksi dengan `date >= openingDate`, termasuk setoran/tarik target tabungan sehingga setoran menabung mengurangi saldo bebas dan penarikan mengembalikan saldo bebas).
+- `spentToday = Σ expense` dengan `date == today` **tidak termasuk** `adjustment` maupun transaksi bertaut target tabungan (`goalId != null`).
+- **Aturan tabungan (`src/domain/savings.ts`, `src/domain/goals.ts`):** maksimal 3 target `'active'`; setoran/penarikan memakai kategori sistem `cat-tabungan` (`Tabungan`) dan `cat-tarik-tabungan` (`Tarik tabungan`); transaksi dengan `goalId != null` tidak masuk total pengeluaran/pemasukan Ringkasan, tidak muncul di pemilih form reguler, dan terkunci dari ubah/hapus langsung di Riwayat.
+- **Aturan anggaran (`src/domain/budgets.ts`):** 1 anggaran per kategori expense non-sistem (`amount` 1.000 s.d. 1.000.000.000); periode mengikuti `getPeriodRange('week' | 'month')`; `spent` mengecualikan `adjustment` dan transaksi `goalId != null`; state `'aman'` (< 80%), `'hampir'` (80% s.d. < 100%), `'habis'` (>= 100%); penghapusan anggaran hanya menghapus aturan batas tanpa menyentuh transaksi.
 
 ### 5.2 Rumus jatah harian
 ```
@@ -259,6 +261,7 @@ interface Transaction {
   type: TransactionType;
   amount: number;          // integer rupiah. expense/income selalu > 0. adjustment bertanda (+/−), ≠ 0.
   categoryId: string | null; // null untuk adjustment
+  goalId: string | null;   // id target tabungan (v2), null untuk transaksi biasa
   note: string;            // maks 80 karakter
   date: string;            // 'YYYY-MM-DD' lokal
   occurredAt: string;      // ISO 8601
@@ -276,6 +279,7 @@ interface Category {
   keywords: string[];      // huruf kecil, untuk parser
   order: number;
   isDefault: boolean;
+  isSystem: boolean;       // true untuk cat-tabungan & cat-tarik-tabungan (tidak masuk form/parser)
 }
 
 interface Template {
@@ -287,23 +291,53 @@ interface Template {
   usageCount: number;
 }
 
+interface Goal {
+  id: string;
+  name: string;            // 1-40 karakter
+  targetAmount: number;    // 10.000-1.000.000.000
+  startDate: string;
+  deadline: string;        // > hari ini saat dibuat
+  status: 'active' | 'completed' | 'archived';
+  lastMilestone: 0 | 25 | 50 | 75 | 100;
+  createdAt: string;
+}
+
+interface DayMark {
+  date: string;            // PK, 'YYYY-MM-DD'
+  kind: 'no_spend';
+  createdAt: string;
+}
+
+interface Budget {
+  categoryId: string;      // PK; hanya kategori expense non-sistem
+  period: 'week' | 'month';
+  amount: number;          // 1.000-1.000.000.000
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface Settings {       // satu baris, id = 'main'
   id: 'main';
-  schemaVersion: number;
+  schemaVersion: number;   // 2 pada rilis 1.0.0
   hasOnboarded: boolean;
   openingBalance: number;
   openingDate: string;
   nextPayday: string;
   paydayRepeat: 'none' | 'monthly' | 'weekly';
-  paydayDay: number | null;      // 1–31 untuk 'monthly'
-  paydayWeekday: number | null;  // 1–7 (1 = Senin .. 7 = Minggu) untuk 'weekly'
+  paydayDay: number | null;      // 1-31 untuk 'monthly'
+  paydayWeekday: number | null;  // 1-7 (1 = Senin .. 7 = Minggu) untuk 'weekly'
   tanggalTuaThreshold: number;   // default 30000
   theme: 'system' | 'light' | 'dark';
   lastExportAt: string | null;
+  reminderEnabled: boolean;      // default false
+  reminderTime: string;          // default '20:00'
+  lastCelebratedStreak: number;  // default 0
+  backupSnoozeUntil: string | null;
+  iosHintDismissed: boolean;     // default false
 }
 ```
 
-**P1 (disiapkan skemanya, belum dipakai di MVP):**
+**Disiapkan skemanya (belum dipakai di 1.0.0):**
 ```ts
 interface Person { id: string; name: string; createdAt: string; }
 interface Debt {
@@ -314,18 +348,24 @@ interface Debt {
 }
 ```
 
-**Dexie schema v1**
+**Dexie schema v2 (migrasi tunggal dari v1):**
 ```
-transactions: 'id, date, type, categoryId, createdAt'
+transactions: 'id, date, type, categoryId, goalId, createdAt'
 categories:   'id, kind, order'
 templates:    'id, order'
 settings:     'id'
+goals:        'id, status, deadline'
+dayMarks:     'date'
+budgets:      'categoryId'
+people:       'id, createdAt'
+debts:        'id, personId, direction, createdAt'
 ```
-Migrasi: tiap perubahan skema menaikkan versi Dexie dengan fungsi `upgrade`; `schemaVersion` di export JSON wajib selalu ada.
+Migrasi v1->v2 mengisi `goalId: null` pada transaksi lama, `isSystem: false` pada kategori lama, menyuntik kategori sistem (`cat-tabungan`, `cat-tarik-tabungan`), dan memperbarui pengaturan secara aman. Bila upgrade gagal, `AppErrorBoundary` menawarkan tombol `"Unduh cadangan data lama"` yang mengekspor seluruh store IndexedDB mentah tanpa menghapus data. Export JSON membawa `schemaVersion: 2` (`goals`, `dayMarks`, `budgets`), tetap menerima file impor v1 tanpa tabel baru.
 
-### 7.1 Kategori default (seed)
+### 7.1 Kategori default & sistem (seed)
 **Pengeluaran:** Makan, Jajan, Transport, Kosan, Paketan, Kuliah, Belanja, Hiburan, Lainnya.
 **Pemasukan:** Kiriman ortu, Gaji/Freelance, Beasiswa, Lainnya.
+**Kategori sistem (`isSystem: true`):** Tabungan (`cat-tabungan`, expense) dan Tarik tabungan (`cat-tarik-tabungan`, income). Dikecualikan dari pemilih kategori form dan parser kata kunci.
 
 ### 7.2 Template default (seed)
 Kopi 12.000 (Jajan), Parkir 2.000 (Transport), Makan 15.000 (Makan). Chip di Beranda menampilkan maksimal 3 template dengan `usageCount` tertinggi (tie-break: `order`), ditambah tombol "+".
@@ -448,12 +488,16 @@ tanggal-tua/
 | `/onboarding` | Onboarding | Hanya jika `hasOnboarded == false`; selain itu redirect ke `/`. |
 | `/` | Beranda | |
 | `/riwayat` | Riwayat | Mendukung query `?kategori=<id>&dari=<start>&sampai=<end>`. |
-| `/ringkasan` | Ringkasan | Lazy-loaded; query `?periode=minggu|bulan&tanggal=YYYY-MM-DD`. |
-| `/patungan` | Patungan | P1. Perlu keputusan navigasi saat dibangun karena 4 slot bawah sudah penuh. |
-| `/pengaturan` | Pengaturan | |
+| `/ringkasan` | Ringkasan | Lazy-loaded; query `?periode=minggu|bulan&tanggal=YYYY-MM-DD`; memuat Insight, Target tabungan, Anggaran. |
+| `/anggaran` | Anggaran | Lazy-loaded; batas mingguan/bulanan per kategori pengeluaran non-sistem. |
+| `/target` | Target Tabungan | Lazy-loaded; daftar target aktif/riwayat (maks 3 aktif). |
+| `/target/:id` | Detail Target | Lazy-loaded; setor/tarik saldo, tandai terbeli, arsip target. |
+| `/pengaturan` | Pengaturan | Tema, jadwal kiriman, pengingat lokal + kalender `.ics`, saldo, template, data, tentang + status persistensi. |
 | (sheet) | Form transaksi | Bottom sheet, bukan rute terpisah (boleh query param `?edit=<id>` agar tombol back bekerja). |
 
-Navigasi bawah (4 item, tinggi 64px): **Beranda, Riwayat, Ringkasan, Pengaturan**.
+Navigasi bawah (4 item, tinggi 64px): **Beranda, Riwayat, Ringkasan, Pengaturan**. Halaman `/anggaran` dan `/target` diakses lewat tautan dari Ringkasan dan Beranda.
+
+**Aturan Banner Beranda Tunggal (1.0.0):** Di Beranda maksimal tampil **1 banner** pada satu waktu dengan urutan prioritas: `kiriman ("Kiriman sudah masuk?") > pengingat harian > anggaran hampir/habis > panduan iOS Safari > pengingat backup 30 hari`. Pil streak dan baris ringkas target berada di luar slot banner.
 
 ### 10.2 Onboarding (F1)
 Satu pertanyaan per layar, tombol utama besar, indikator langkah.
@@ -573,7 +617,7 @@ Font tunggal: **Plus Jakarta Sans** (self-host). Skala:
 `Button` (primer, sekunder, ghost), `Chip` (template), `Card`, `Sheet`, `Toast` (dengan aksi), `ProgressBar`, `Switch`, `SegmentedControl`, `EmptyState`, `TransactionRow`, `CategoryIcon`, `Mascot`, `BottomNav`. Gunakan elemen semantik asli (`<button>`, `<a>`, `<input>` + `<label>`), jangan `div` dengan `onClick`.
 
 ### 11.5 Maskot "Receh" (koin)
-Lingkaran koin kuning dengan cincin dalam, dua mata titik, pipi merah muda tipis. Ekspresi mulut: `smile` (normal/fresh), `flat` (tanggal-tua), `oops` (over), `sleepy` (broke). Dekoratif → `aria-hidden="true"`. Dasar SVG (viewBox 48):
+Lingkaran koin kuning dengan cincin dalam, dua mata titik, pipi merah muda tipis. Ekspresi mulut: `smile` (normal/fresh), `flat` (tanggal-tua), `oops` (over), `sleepy` (broke), `cheer` (tonggak streak / target tercapai), dan `wink` (dukungan positif). Dekoratif -> `aria-hidden="true"`. Dasar SVG (viewBox 48):
 ```svg
 <svg viewBox="0 0 48 48" aria-hidden="true">
   <circle cx="24" cy="24" r="22" fill="var(--coin)"/>
@@ -613,7 +657,7 @@ Lingkaran koin kuning dengan cincin dalam, dua mata titik, pipi merah muda tipis
 | `broke` | "Dompet lagi kosong. Kita cari jalan pelan-pelan." |
 | `payday-needed` | "Kiriman udah masuk? Catat dulu biar jatahnya akurat." |
 
-**String umum:** "Jatah hari ini", "Catat cepat", "Hari ini", "Lihat semua", "Ketik: kopi 18rb", "Tersimpan · {catatan} −{nominal}", "Batalkan", "Belum ada catatan hari ini. Yuk catat yang pertama.", "Datamu hanya ada di perangkat ini.", "Hapus semua data? Ini tidak bisa dibatalkan."
+**String umum (1.0.0):** "Jatah hari ini", "Sisa uang", "Catat cepat", "Hari ini", "Lihat semua", "Ketik: kopi 18rb", "Tersimpan · {catatan} −{nominal}", "Batalkan", "Belum ada catatan hari ini. Yuk catat yang pertama.", "Datamu hanya ada di perangkat ini.", "Hapus semua data? Ini tidak bisa dibatalkan.", "Sudah catat jajan hari ini?", "Hari ini tidak ada pengeluaran", "Sudah 30 hari sejak cadangan terakhir. Unduh cadangan biar datamu aman.", "Transaksi tabungan hanya dapat diubah atau dihapus lewat halaman Target.".
 
 **Pesan error parser (hint):** NO_AMOUNT "Tambah nominal, mis. 10rb" · MULTIPLE_AMOUNTS "Catat satu per satu dulu ya" · OUT_OF_RANGE "Nominalnya di luar batas wajar" · INVALID_AMOUNT "Nominalnya belum terbaca".
 
@@ -636,15 +680,20 @@ Lingkaran koin kuning dengan cincin dalam, dua mata titik, pipi merah muda tipis
   "background_color": "#FAF5EC",
   "theme_color": "#2B3A8C",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Catat pengeluaran", "url": "/?aksi=catat", "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Ringkasan", "url": "/ringkasan", "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96", "type": "image/png" }] }
   ]
 }
 ```
-- Tambahkan `apple-touch-icon` dan meta iOS standalone. Ikon aplikasi = koin maskot di atas latar solid.
+- Tambahkan `apple-touch-icon` dan meta iOS standalone, serta panduan "Pasang ke Layar Utama" khusus Safari iOS non-standalone dengan ikon SVG inline. Ikon aplikasi = koin maskot di atas latar solid.
 - **Pembaruan:** saat versi baru tersedia, tampilkan toast "Versi baru tersedia · Muat ulang"; jangan memuat ulang paksa saat pengguna sedang mengetik.
-- **Persistensi data:** panggil `navigator.storage.persist()` setelah transaksi pertama (jika didukung). Browser tetap dapat menghapus data situs; karena itu sediakan Export dan (P1) pengingat backup.
+- **Batasan latar belakang & pengingat:** Tanggal Tua sengaja tidak memakai Push Notification, Periodic Background Sync, maupun Notification Triggers (tanpa server dan tanpa permintaan izin). Pengingat berjalan lokal di dalam aplikasi pada pembukaan / kembali ke latar depan + interval 30 detik, serta lewat unduhan jadwal `.ics` harian ke kalender bawaan perangkat.
+- **Persistensi data & pelindung cadangan:** panggil `navigator.storage.persist()` setelah transaksi pertama (jika didukung) dan tampilkan status aktif/tidak aktif di Pengaturan -> Tentang; tampilkan tanggal cadangan terakhir di Pengaturan -> Data dan pengingat cadangan JSON setelah >= 10 transaksi dan > 30 hari tanpa ekspor (bisa ditunda 7 hari).
 - Aplikasi harus **bisa dipakai penuh dalam mode pesawat** setelah kunjungan pertama.
 
 ---

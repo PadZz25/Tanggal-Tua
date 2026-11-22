@@ -52,13 +52,14 @@ npx lighthouse http://127.0.0.1:4177 --only-categories=performance,accessibility
 ## 3. Audit Kontras & Aksesibilitas Otomatis
 
 - **Audit token matematis (`src/styles/contrast.test.ts`):** Mem-parse seluruh variabel warna langsung dari `src/styles/tokens.css` (tema terang dan gelap). **60 pengujian lulus** mencakup `--ink`, `--muted`, `--primary`, `--on-primary`, `--warm-ink`, `--status-hampir`, `--status-hampir-bg`, `--status-habis-bg`, seluruh 9 pasangan kategori `--tone-*` (`>= 4.5:1`), batas kontrol/progress (`>= 3.0:1`), serta 9 warna chart `--chart-1..9` (`>= 3.0:1` terhadap `--surface` dan selisih luminansi bertetangga).
-- **Audit `@axe-core/playwright` (`e2e/release-1.0.spec.ts`):** Menguji halaman utama (Onboarding, Beranda, Riwayat, Ringkasan, Anggaran, Target, Pengaturan) pada tema terang dan gelap dengan target **0 pelanggaran serius/kritis**. (Disinkronkan pada komit rilis 1.0.0 setelah eksekusi penuh E2E.)
+- **Audit `@axe-core/playwright` (`e2e/release-1.0.spec.ts`):** Menguji seluruh 7 rute (Onboarding, Beranda, Riwayat, Ringkasan, Anggaran, Target, Pengaturan) pada tema terang dan gelap dengan hasil **0 pelanggaran serius/kritis** (13 pemindaian penuh WCAG 2.0/2.1/2.2 AA).
+- **Kepatuhan ringkas seluruh suite:** **27 berkas test Vitest (220 test)** dan **13 skenario E2E Playwright** lulus penuh dengan guard permintaan jaringan lintas-origin (`0` permintaan ke server eksternal).
 
 ## 4. Verifikasi Checklist `docs/SPEC.md` Bagian 16.4 (Acceptance)
 
 | # | Kriteria Bagian 16.4 | Status | Bukti |
 |---|---|---|---|
-| 1 | Semua unit, komponen, E2E lulus; `tsc --noEmit` & ESLint bersih | Terverifikasi | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` |
+| 1 | Semua unit, komponen, E2E lulus; `tsc --noEmit` & ESLint bersih | Terverifikasi | `pnpm lint` (0 error), `pnpm typecheck` (0 error), `pnpm test` (27 berkas / 220 test), `pnpm test:e2e` (13/13 lulus) |
 | 2 | Lighthouse sesuai target pada build produksi & PWA installable | Terverifikasi | Perf 98, A11y 100, BP 100; manifest + SW aktif |
 | 3 | Berfungsi penuh offline & dapat diinstal (Android Chrome; uji manual iOS Safari) | Otomatis + Manual pemilik | E2E offline & manifest/guide lulus; perangkat nyata di `docs/QA-CHECKLIST.md` |
 | 4 | Kontras diuji untuk tema terang, gelap, dan state tanggal-tua | Terverifikasi | 60 kasus di `src/styles/contrast.test.ts` |

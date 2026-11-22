@@ -77,3 +77,21 @@ Dokumen ini mencatat keputusan arsitektur, desain, dan penyempurnaan spesifikasi
   - Fitur jadwal kiriman mingguan (`paydayRepeat: 'weekly'` + `paydayWeekday`) secara sengaja dirilis sebagai versi PATCH **`0.3.1`** atas permintaan pemilik proyek agar selaras dengan bundel rilis kecil bersama perbaikan bug navigasi, meskipun dalam konvensi SemVer (`0.x`) penambahan fitur fungsional lazimnya dinaikkan ke tingkat MINOR (`0.4.0`).
 - **Keputusan 3 (Kompatibilitas Penuh Tanpa Naik Versi Skema Dexie):**
   - Penambahan `paydayRepeat` dan `paydayWeekday` tetap memakai skema Dexie v1 tanpa migrasi tabel. Fungsi `normalizeSettings` menormalkan baris lama (`paydayDay != null` -> `'monthly'`, selain itu `'none'`), dan `SettingsSchema` Zod menerima berkas ekspor JSON lama yang belum memiliki field baru tanpa menaikkan `schemaVersion`.
+
+## 2026-11-22: Keputusan Rilis Stabil 1.0.0
+
+- **Tanggal:** 2026-11-22
+- **Keputusan 1 (`@axe-core/playwright` sebagai Satu-satunya Dependensi Tambahan):**
+  - Menambahkan `@axe-core/playwright` sebagai `devDependency` agar audit WCAG 2.2 AA berjalan otomatis pada suite E2E untuk seluruh 7 rute (tema terang dan gelap) tanpa mengubah ukuran bundel produksi.
+- **Keputusan 2 (Tanpa Push Notification API, Periodic Background Sync, atau Notification Triggers):**
+  - Aplikasi menolak pemakaian Web Push maupun background scheduler yang membutuhkan server atau izin agresif/dukungan browser tidak merata. Pengingat memakai evaluasi lokal saat app dibuka/kembali aktif ditambah ekspor `.ics` berulang untuk aplikasi kalender bawaan pengguna.
+- **Keputusan 3 (Tabungan Di Luar `spentToday` dan Ringkasan Belanja):**
+  - Setoran/penarikan target tabungan (`goalId != null`, kategori sistem `cat-tabungan` / `cat-tarik-tabungan`) memengaruhi `currentBalance` (sehingga jatah harian ikut menyesuaikan uang bebas), tetapi dikecualikan dari `spentToday` serta total pengeluaran/pemasukan/grafik Ringkasan agar menabung tidak tampak sebagai "pengeluaran konsumsi".
+- **Keputusan 4 (Anggaran Menggunakan Minggu/Bulan Kalender Konsisten dengan Ringkasan):**
+  - Evaluasi anggaran memakai `getPeriodRange('week' | 'month')` (Senin-Minggu dan 1-akhir bulan) serta mengecualikan `adjustment` dan transaksi bertaut `goalId`, sehingga angka anggaran selalu selaras 1:1 dengan halaman Ringkasan.
+- **Keputusan 5 (Banner Beranda Tunggal Berbasis Prioritas):**
+  - Pada satu waktu hanya satu banner konteks yang boleh tampil di Beranda dengan urutan `kiriman > pengingat harian > anggaran > panduan iOS > cadangan` (`pickHomeBanner`), sementara pil streak dan baris ringkas target berada di luar slot banner agar tata letak mobile `390x844` tetap lapang.
+- **Keputusan 6 (Penggabungan Rencana 0.4.0 Langsung ke Rilis Stabil 1.0.0):**
+  - Seluruh ruang lingkup fitur inti lokal-first digabung ke dalam satu migrasi Dexie `version(2)` dan dirilis langsung sebagai **`1.0.0`** mengikuti konvensi *Semantic Versioning* stabil dengan jaminan migrasi aman bagi pengguna dari versi `>= 0.3`.
+- **Keputusan 7 (Penundaan Input Suara ke Pasca-1.0.0):**
+  - Input suara ditunda ke rilis mendatang karena memerlukan keputusan desain terpisah terkait privasi pemrosesan audio, ketersediaan mode lokal offline tanpa API cloud, serta akurasi parser angka berbentuk kata dalam Bahasa Indonesia (seperti `"dua puluh lima ribu"`).

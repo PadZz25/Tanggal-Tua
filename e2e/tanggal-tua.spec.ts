@@ -117,7 +117,7 @@ test.describe('Tanggal Tua E2E Flows (0.3.0 Tugas 5)', () => {
     await completeInitialOnboarding(page);
 
     await page.getByRole('link', { name: 'Pengaturan' }).click();
-    await expect(page.getByText(/Versi 1\.0\.0/i)).toBeVisible();
+    await expect(page.getByText(/Versi 1\.0\.1/i)).toBeVisible();
 
     const darkRadio = page.getByRole('radio', { name: 'Gelap' });
     await darkRadio.click();

@@ -3,6 +3,12 @@
 Seluruh perubahan penting pada proyek **Tanggal Tua** dicatat di dokumen ini.
 Format mengacu pada [Keep a Changelog](https://keepachangelog.com/id/1.1.0/), dan penomoran versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.0.1] - 2026-11-22
+
+### Changed
+- Pil streak (`N hari`) dipindahkan dari baris `Catat cepat` ke sisi kanan header atas Beranda berdampingan dengan tombol `+` agar tata letak Beranda lebih rapi dan proporsional.
+- Tombol `Instal` ringkas dilepas dari header Beranda supaya ruang header tetap lega pada layar sempit; opsi pemasangan aplikasi tetap tersedia di Pengaturan dan Onboarding.
+
 ## [1.0.0] - 2026-11-22
 
 ### Added

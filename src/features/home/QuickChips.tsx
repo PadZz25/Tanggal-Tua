@@ -1,4 +1,4 @@
-import { Flame, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import {
   applyTemplateQuickTap,
   revertTemplateQuickTap,
@@ -16,8 +16,6 @@ interface QuickChipsProps {
   budgets?: Budget[];
   categoryMap?: ReadonlyMap<string, Category>;
   lastCelebratedStreak?: number;
-  currentStreak: number;
-  onOpenStreakSheet: () => void;
   onAddTemplateClick: () => void;
 }
 
@@ -29,8 +27,6 @@ export function QuickChips({
   budgets = [],
   categoryMap = new Map(),
   lastCelebratedStreak = 0,
-  currentStreak,
-  onOpenStreakSheet,
   onAddTemplateClick,
 }: QuickChipsProps) {
   const handleChipTap = async (tpl: Template) => {
@@ -59,23 +55,10 @@ export function QuickChips({
 
   return (
     <section aria-label={UI_STRINGS.quickSectionLabel} className="mt-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[13px] font-bold text-[var(--muted)]">
-          {UI_STRINGS.quickSectionLabel}
-        </h2>
-
-        <button
-          type="button"
-          data-testid="streak-pill"
-          onClick={onOpenStreakSheet}
-          aria-label={`Streak mencatat ${currentStreak} hari`}
-          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--border-control)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--ink)] transition-colors hover:bg-[var(--border-soft)] active:scale-95"
-        >
-          <Flame size={15} strokeWidth={2.3} className="text-[var(--primary)]" aria-hidden="true" />
-          <span className="tabular-nums">{currentStreak} hari</span>
-        </button>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
+      <h2 className="text-[13px] font-bold text-[var(--muted)]">
+        {UI_STRINGS.quickSectionLabel}
+      </h2>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         {templates.map((tpl) => (
           <button
             key={tpl.id}

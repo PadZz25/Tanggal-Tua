@@ -99,7 +99,7 @@ describe('History & Settings pages (Milestone M5)', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Pengaturan' })).toBeInTheDocument();
-      expect(screen.getByText(/Versi 1\.0\.0/i)).toBeInTheDocument();
+      expect(screen.getByText(/Versi 1\.0\.1/i)).toBeInTheDocument();
     });
 
     const balanceInput = screen.getByLabelText('Uang nyata yang kamu pegang sekarang');
@@ -141,7 +141,7 @@ describe('History & Settings pages (Milestone M5)', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Pengaturan' })).toBeInTheDocument();
-      expect(screen.getByText(/Versi 1\.0\.0/i)).toBeInTheDocument();
+      expect(screen.getByText(/Versi 1\.0\.1/i)).toBeInTheDocument();
     });
 
     const radioTerang = screen.getByRole('radio', { name: 'Terang' });
@@ -362,7 +362,7 @@ describe('History & Settings pages (Milestone M5)', () => {
       );
 
       const aboutHeading = screen.getByRole('heading', {
-        name: /Tanggal Tua · Versi 1\.0\.0/,
+        name: /Tanggal Tua · Versi 1\.0\.1/,
       });
       expect(aboutHeading).toBeInTheDocument();
       expect(aboutHeading.textContent).not.toMatch(/beta|pra-rilis/i);

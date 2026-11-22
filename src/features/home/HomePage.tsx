@@ -1,8 +1,7 @@
-import { AlertCircle, Bell, Download, Plus, Target, X } from 'lucide-react';
+import { AlertCircle, Bell, Download, Flame, Plus, Target, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Wordmark } from '../../components/brand/Wordmark';
-import { InstallPwaButton } from '../../components/ui/InstallPwaButton';
 import { IosInstallGuide } from '../../components/ui/IosInstallGuide';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Sheet } from '../../components/ui/Sheet';
@@ -167,13 +166,29 @@ export function HomePage({ live }: HomePageProps) {
     <>
       <header className="flex h-16 items-center justify-between gap-2">
         <Wordmark mood={live.homeState.mood} asHeading />
-        <div className="flex items-center gap-2">
-          <InstallPwaButton variant="compact" />
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            data-testid="streak-pill"
+            onClick={() => setIsStreakOpen(true)}
+            aria-label={`Streak mencatat ${live.streak.currentStreak} hari`}
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--border-control)] bg-[var(--surface)] px-3.5 text-[13px] font-extrabold text-[var(--ink)] transition-colors hover:bg-[var(--border-soft)] active:scale-95"
+          >
+            <Flame
+              size={15}
+              strokeWidth={2.3}
+              className="shrink-0 text-[var(--primary)]"
+              aria-hidden="true"
+            />
+            <span className="tabular-nums whitespace-nowrap">
+              {live.streak.currentStreak} hari
+            </span>
+          </button>
           <button
             type="button"
             onClick={() => openTransactionSheet({ defaultType: 'expense' })}
             aria-label="Tambah transaksi lengkap"
-            className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[var(--border-control)] bg-[var(--surface)] text-[var(--ink)] transition-colors hover:bg-[var(--border-soft)] active:scale-95"
+            className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full border border-[var(--border-control)] bg-[var(--surface)] text-[var(--ink)] transition-colors hover:bg-[var(--border-soft)] active:scale-95"
           >
             <Plus size={20} strokeWidth={2.3} aria-hidden="true" />
           </button>
@@ -320,8 +335,6 @@ export function HomePage({ live }: HomePageProps) {
         budgets={live.budgets}
         categoryMap={live.categoryMap}
         lastCelebratedStreak={live.settings.lastCelebratedStreak}
-        currentStreak={live.streak.currentStreak}
-        onOpenStreakSheet={() => setIsStreakOpen(true)}
         onAddTemplateClick={() => {
           setTplError(null);
           setIsAddTemplateOpen(true);

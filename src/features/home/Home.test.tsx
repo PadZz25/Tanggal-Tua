@@ -331,6 +331,10 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
 
     const pill = await screen.findByTestId('streak-pill');
     expect(pill).toHaveTextContent('2 hari');
+    expect(screen.getByRole('banner')).toContainElement(pill);
+    expect(
+      screen.queryByRole('button', { name: /Instal aplikasi Tanggal Tua/i })
+    ).not.toBeInTheDocument();
 
     // Open StreakSheet and mark today as no_spend -> reaches streak 3 milestone!
     await user.click(pill);

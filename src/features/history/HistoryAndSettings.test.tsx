@@ -12,6 +12,7 @@ import {
   createTransaction,
   getAllTransactions,
 } from '../../data/repositories/transactions';
+import { getAllTemplates } from '../../data/repositories/templates';
 import {
   SYSTEM_CATEGORY_SAVING_ID,
 } from '../../domain/parser/keywords';
@@ -395,5 +396,60 @@ describe('History & Settings pages (Milestone M5)', () => {
         delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
       }
     }
+  });
+
+  it('treats orphan goalId transaction as regular editable/deletable transaction without Tabungan badge and keeps deleted templates empty without resurrecting defaults', async () => {
+    const user = userEvent.setup();
+
+    await createTransaction({
+      type: 'expense',
+      amount: 75_000,
+      categoryId: SYSTEM_CATEGORY_SAVING_ID,
+      goalId: 'missing-goal-id',
+      note: 'Setoran yatim',
+      date: '2026-11-18',
+      source: 'form',
+    });
+
+    window.history.pushState({}, '', '/riwayat');
+    const viewHist = render(<App />);
+
+    expect(await screen.findByText('Setoran yatim')).toBeInTheDocument();
+    expect(screen.queryByText('Tabungan')).not.toBeInTheDocument();
+
+    // Opening orphan tx allows editing in TransactionSheet and clears orphan goalId
+    await user.click(screen.getByText('Setoran yatim'));
+    expect(screen.getByRole('heading', { name: 'Ubah Transaksi' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Simpan' }));
+
+    await waitFor(async () => {
+      const updatedTxs = await getAllTransactions();
+      expect(updatedTxs[0].goalId).toBeNull();
+    });
+    viewHist.unmount();
+
+    // Deleting all templates in Pengaturan does not resurrect DEFAULT_TEMPLATES and supports Batalkan
+    window.history.pushState({}, '', '/pengaturan');
+    const viewSettings = render(<App />);
+
+    const deleteButtons = await screen.findAllByRole('button', { name: /^Hapus template /i });
+    expect(deleteButtons).toHaveLength(3);
+
+    for (let i = 0; i < deleteButtons.length; i += 1) {
+      const nextBtn = screen.getAllByRole('button', { name: /^Hapus template /i })[0];
+      await user.click(nextBtn);
+    }
+
+    await waitFor(async () => {
+      expect(await getAllTemplates()).toHaveLength(0);
+      expect(screen.getByText(/Belum ada template/i)).toBeInTheDocument();
+    });
+
+    // Undo restores the last deleted template
+    await user.click(screen.getByRole('button', { name: 'Batalkan' }));
+    await waitFor(async () => {
+      expect(await getAllTemplates()).toHaveLength(1);
+    });
+    viewSettings.unmount();
   });
 });

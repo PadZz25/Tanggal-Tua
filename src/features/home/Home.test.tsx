@@ -353,11 +353,19 @@ describe('Home features & components (Milestone M3 & 0.3.0 Tugas 1)', () => {
       );
     });
 
-    // Re-open StreakSheet -> no_spend button is disabled because today is already logged
+    // Re-open StreakSheet -> no_spend button is disabled because today is already logged, and Batalkan penanda hari ini removes dayMark
     await user.click(screen.getByTestId('streak-pill'));
     expect(
       screen.getByRole('button', { name: 'Hari ini tidak ada pengeluaran' })
     ).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Batalkan penanda hari ini' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('streak-pill')).toHaveTextContent('2 hari');
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Penanda hari tanpa pengeluaran dihapus'
+      );
+    });
 
     // Render Mascot cheer & wink SVG expressions cleanly
     const { container } = render(

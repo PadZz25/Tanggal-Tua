@@ -3,9 +3,11 @@ import { computeAllowance, computeBalances } from './allowance';
 import { addDays } from './dates';
 import {
   computeGoalMetrics,
+  computeHighestMilestoneReached,
   detectGoalMilestone,
   pickPrimaryActiveGoal,
   previewGoalDepositAllowance,
+  validateGoalInput,
 } from './goals';
 import { SYSTEM_CATEGORY_SAVING_ID } from './parser/keywords';
 import type { Goal, Transaction } from './types';
@@ -157,5 +159,92 @@ describe('goals domain contract (1.0.0 Tugas 5)', () => {
       makeGoal({ id: 'g-soon', deadline: '2026-12-05', status: 'active' }),
     ]);
     expect(picked?.id).toBe('g-soon');
+  });
+
+  it('validates goal edit/create inputs, recalculates lastMilestone on target resize, and handles overdue deadlines without error', () => {
+    expect(
+      validateGoalInput({
+        name: '   ',
+        targetAmount: 100_000,
+        deadline: '2026-12-01',
+        today: '2026-11-18',
+      })
+    ).toEqual({
+      ok: false,
+      error: 'Nama target wajib diisi (1 sampai 40 karakter).',
+    });
+
+    expect(
+      validateGoalInput({
+        name: 'A'.repeat(41),
+        targetAmount: 100_000,
+        deadline: '2026-12-01',
+        today: '2026-11-18',
+      }).ok
+    ).toBe(false);
+
+    expect(
+      validateGoalInput({
+        name: 'Laptop',
+        targetAmount: 9_000,
+        deadline: '2026-12-01',
+        today: '2026-11-18',
+      }).ok
+    ).toBe(false);
+
+    expect(
+      validateGoalInput({
+        name: 'Laptop',
+        targetAmount: 1_000_000_001,
+        deadline: '2026-12-01',
+        today: '2026-11-18',
+      }).ok
+    ).toBe(false);
+
+    expect(
+      validateGoalInput({
+        name: 'Laptop',
+        targetAmount: 100_000,
+        deadline: '2026-11-18',
+        today: '2026-11-18',
+      })
+    ).toEqual({
+      ok: false,
+      error: 'Tanggal target harus setelah hari ini.',
+    });
+
+    expect(
+      validateGoalInput({
+        name: '  Laptop Baru  ',
+        targetAmount: 8_000_000,
+        deadline: '2026-12-30',
+        today: '2026-11-18',
+      })
+    ).toEqual({
+      ok: true,
+      name: 'Laptop Baru',
+      targetAmount: 8_000_000,
+      deadline: '2026-12-30',
+    });
+
+    // Mandatory milestone test example: saved 2jt, target 8jt (25%) -> 4jt (50%) -> 20jt (10% -> 0) -> 1.5jt (100)
+    expect(computeHighestMilestoneReached(2_000_000, 8_000_000)).toBe(25);
+    expect(computeHighestMilestoneReached(2_000_000, 4_000_000)).toBe(50);
+    expect(computeHighestMilestoneReached(2_000_000, 20_000_000)).toBe(0);
+    expect(computeHighestMilestoneReached(2_000_000, 1_500_000)).toBe(100);
+
+    // Overdue goal metrics never throw and suppress saving suggestions
+    const overdue = computeGoalMetrics({
+      goal: makeGoal({ startDate: '2026-11-01', deadline: '2026-11-15' }),
+      transactions: [makeGoalDeposit(500_000)],
+      today: '2026-11-18',
+      currentDailyAllowance: 65_000,
+    });
+    expect(overdue.isPastDeadline).toBe(true);
+    expect(overdue.daysLeft).toBe(0);
+    expect(overdue.perWeek).toBeNull();
+    expect(overdue.perMonth).toBeNull();
+    expect(overdue.dailyEffect).toBeNull();
+    expect(overdue.isHeavy).toBe(false);
   });
 });

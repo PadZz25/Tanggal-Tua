@@ -418,6 +418,16 @@ test.describe('Tanggal Tua 1.0.0 Full E2E & Accessibility Suite', () => {
     await page.getByRole('button', { name: 'Simpan target' }).click();
     await expect(page.getByRole('heading', { name: 'Kamera saku' })).toBeVisible();
 
+    await page.getByRole('button', { name: 'Ubah', exact: true }).click();
+    const offlineEditDialog = page.locator('dialog[open]');
+    await offlineEditDialog.getByLabel('Nama target').fill('Kamera vlog');
+    await offlineEditDialog.getByRole('button', { name: 'Simpan perubahan' }).click();
+    await expect(page.getByRole('heading', { name: 'Kamera vlog' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Hapus', exact: true }).click();
+    await page.locator('dialog[open]').getByRole('button', { name: 'Hapus permanen' }).click();
+    await expect(page.getByRole('status')).toContainText('Target dihapus');
+
     await page.goto('/ringkasan');
     await expect(page.getByTestId('summary-total-expense')).toHaveText('Rp 40.000');
 
@@ -428,5 +438,135 @@ test.describe('Tanggal Tua 1.0.0 Full E2E & Accessibility Suite', () => {
     expect(icsDl.suggestedFilename()).toBe('tanggal-tua-pengingat.ics');
 
     await context.setOffline(false);
+  });
+
+  test('1.0.2 target edit/delete flows: touch targets >= 44px, edit persists across reload, permanent delete + Batalkan restores exact state, and completed hides without refund', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.__TANGGAL_TUA_TODAY__ = '2026-11-18';
+    });
+
+    await completeOnboardingUi(page);
+
+    // 1. Create empty target -> test empty delete + Batalkan
+    await page.goto('/target');
+    await page.getByRole('button', { name: /Buat target/i }).first().click();
+    await page.getByLabel('Nama target').fill('Laptop kuliah');
+    await page.getByLabel('Nominal target (Rp 10rb sampai Rp 1M)').fill('8jt');
+    await page.getByLabel('Tanggal target tercapai').fill('2026-12-20');
+    await page.getByRole('button', { name: 'Simpan target' }).click();
+
+    const editBtn = page.getByRole('button', { name: 'Ubah', exact: true });
+    const deleteBtn = page.getByRole('button', { name: 'Hapus', exact: true });
+    await expect(editBtn).toBeVisible();
+    await expect(deleteBtn).toBeVisible();
+    const editBox = await editBtn.boundingBox();
+    const deleteBox = await deleteBtn.boundingBox();
+    expect(editBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(deleteBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await deleteBtn.click();
+    const emptyDialog = page.locator('dialog[open]');
+    await expect(emptyDialog).toContainText('Belum ada tabungan di target ini.');
+    await emptyDialog.getByRole('button', { name: 'Hapus permanen' }).click();
+
+    await expect(page.getByRole('status')).toContainText('Target dihapus');
+    await page.getByRole('button', { name: 'Batalkan' }).click();
+    await expect(page.getByText('Laptop kuliah')).toBeVisible();
+
+    // 2. Edit name, nominal, deadline -> reload -> check Beranda & Ringkasan
+    await page.getByRole('link', { name: /Laptop kuliah/i }).click();
+    await page.getByRole('button', { name: 'Ubah', exact: true }).click();
+    const editDialog = page.locator('dialog[open]');
+    await editDialog.getByLabel('Nama target').fill('Laptop kerja');
+    await editDialog.getByLabel('Nominal target (Rp 10rb sampai Rp 1M)').fill('4jt');
+    await editDialog.getByLabel('Tanggal target tercapai').fill('2026-12-28');
+    await editDialog.getByRole('button', { name: 'Simpan perubahan' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Laptop kerja' })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Laptop kerja' })).toBeVisible();
+    await expect(page.getByText(/Rp 4\.000\.000/)).toBeVisible();
+
+    await page.getByRole('link', { name: 'Beranda' }).click();
+    await expect(page.getByTestId('home-goal-row')).toContainText('Laptop kerja');
+    await expect(page.getByTestId('home-goal-row')).toContainText('Rp 4jt');
+
+    await page.getByRole('link', { name: 'Ringkasan' }).click();
+    await expect(page.getByText('Laptop kerja')).toBeVisible();
+
+    // 3. Deposit 130rb (845k -> 715k, allowance 65k -> 55k) -> permanent delete -> 845k/65k + clean Riwayat -> Batalkan -> 715k/55k
+    await page.goto('/target');
+    await page.getByRole('link', { name: /Laptop kerja/i }).click();
+    await page.getByRole('button', { name: 'Sisihkan' }).click();
+    await page.getByLabel('Nominal yang disisihkan').fill('130000');
+    await page.getByRole('button', { name: 'Simpan setoran' }).click();
+
+    await page.getByRole('link', { name: 'Beranda' }).click();
+    await expect(page.getByTestId('hero-total-balance')).toContainText('Rp 715.000');
+    await expect(page.getByTestId('hero-allowance-amount')).toContainText('Rp 55rb');
+
+    await page.getByTestId('home-goal-row').click();
+    await page.getByRole('button', { name: 'Hapus', exact: true }).click();
+    const fundedDialog = page.locator('dialog[open]');
+    await expect(fundedDialog).toContainText('Rp 130rb akan dikembalikan ke saldo');
+    await fundedDialog.getByRole('button', { name: 'Hapus permanen' }).click();
+
+    await expect(page.getByRole('status')).toContainText('Target dihapus');
+    await page.getByRole('button', { name: 'Batalkan' }).click();
+    await expect(page.getByText('Laptop kerja')).toBeVisible();
+
+    await page.getByRole('link', { name: 'Beranda' }).click();
+    await expect(page.getByTestId('hero-total-balance')).toContainText('Rp 715.000');
+    await expect(page.getByTestId('hero-allowance-amount')).toContainText('Rp 55rb');
+
+    await page.getByTestId('home-goal-row').click();
+    await page.getByRole('button', { name: 'Hapus', exact: true }).click();
+    await page.locator('dialog[open]').getByRole('button', { name: 'Hapus permanen' }).click();
+
+    await page.getByRole('link', { name: 'Beranda' }).click();
+    await expect(page.getByTestId('hero-total-balance')).toContainText('Rp 845.000');
+    await expect(page.getByTestId('hero-allowance-amount')).toContainText('Rp 65rb');
+    await page.getByRole('link', { name: 'Riwayat' }).click();
+    await expect(page.getByText(/Sisihkan · Laptop kerja/i)).toHaveCount(0);
+
+    // 4. Completed target -> only Sembunyikan -> Lihat arsip -> zero refund tx
+    await page.goto('/target');
+    await page.getByRole('button', { name: /Buat target/i }).first().click();
+    await page.getByLabel('Nama target').fill('Headset baru');
+    await page.getByLabel('Nominal target (Rp 10rb sampai Rp 1M)').fill('100rb');
+    await page.getByLabel('Tanggal target tercapai').fill('2026-12-29');
+    await page.getByRole('button', { name: 'Simpan target' }).click();
+    await page.getByRole('button', { name: 'Sisihkan' }).click();
+    await page.getByLabel('Nominal yang disisihkan').fill('100000');
+    await page.getByRole('button', { name: 'Simpan setoran' }).click();
+    await page.getByRole('button', { name: 'Pakai untuk beli' }).click();
+
+    await expect(page.getByRole('button', { name: 'Ubah', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Hapus', exact: true })).toHaveCount(0);
+    await expect(
+      page.getByText(
+        'Target yang sudah terpakai disimpan sebagai riwayat karena uangnya sudah terpakai.'
+      )
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Sembunyikan' }).click();
+
+    await expect(page.getByText('Headset baru')).toHaveCount(0);
+    await page.getByRole('button', { name: /Lihat arsip/i }).click();
+    await expect(page.getByText('Headset baru')).toBeVisible();
+
+    await page.getByRole('link', { name: 'Beranda' }).click();
+    await expect(page.getByTestId('hero-total-balance')).toContainText('Rp 745.000');
+
+    // 5. Simulate PWA update from existing Dexie v2 state -> toast + reload preserves goals and balance cleanly
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('tanggal-tua-sw-update-waiting'));
+    });
+    await expect(page.getByText('Versi baru tersedia · Muat ulang')).toBeVisible();
+    await page.getByRole('button', { name: 'Muat ulang' }).click();
+    await expect(page.getByTestId('hero-total-balance')).toContainText('Rp 745.000', {
+      timeout: 5_000,
+    });
   });
 });

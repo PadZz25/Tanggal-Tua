@@ -1,9 +1,8 @@
-import { daysBetween } from '../../domain/dates';
 import {
   MAX_ACTIVE_GOALS,
-  MAX_GOAL_TARGET,
-  MIN_GOAL_TARGET,
+  computeHighestMilestoneReached,
   detectGoalMilestone,
+  validateGoalInput,
 } from '../../domain/goals';
 import {
   SYSTEM_CATEGORY_SAVING_ID,
@@ -29,19 +28,14 @@ export async function createGoal(input: {
   today: string;
   deadline: string;
 }): Promise<Goal> {
-  const trimmedName = input.name.trim();
-  if (!trimmedName || trimmedName.length > 40) {
-    throw new Error('Nama target wajib diisi (1 sampai 40 karakter).');
-  }
-  if (
-    !Number.isInteger(input.targetAmount) ||
-    input.targetAmount < MIN_GOAL_TARGET ||
-    input.targetAmount > MAX_GOAL_TARGET
-  ) {
-    throw new Error('Nominal target antara Rp 10.000 sampai Rp 1.000.000.000.');
-  }
-  if (!input.deadline || daysBetween(input.today, input.deadline) < 1) {
-    throw new Error('Tanggal target harus setelah hari ini.');
+  const check = validateGoalInput({
+    name: input.name,
+    targetAmount: input.targetAmount,
+    deadline: input.deadline,
+    today: input.today,
+  });
+  if (!check.ok) {
+    throw new Error(check.error);
   }
 
   return db.transaction('rw', db.goals, async () => {
@@ -57,10 +51,10 @@ export async function createGoal(input: {
 
     const goal: Goal = {
       id: crypto.randomUUID(),
-      name: trimmedName,
-      targetAmount: Math.trunc(input.targetAmount),
+      name: check.name,
+      targetAmount: check.targetAmount,
       startDate: input.today,
-      deadline: input.deadline,
+      deadline: check.deadline,
       status: 'active',
       lastMilestone: 0,
       createdAt: new Date().toISOString(),
@@ -68,6 +62,55 @@ export async function createGoal(input: {
     GoalSchema.parse(goal);
     await db.goals.put(goal);
     return goal;
+  });
+}
+
+export async function updateGoal(input: {
+  goalId: string;
+  name: string;
+  targetAmount: number;
+  deadline: string;
+  today: string;
+}): Promise<Goal> {
+  const check = validateGoalInput({
+    name: input.name,
+    targetAmount: input.targetAmount,
+    deadline: input.deadline,
+    today: input.today,
+  });
+  if (!check.ok) {
+    throw new Error(check.error);
+  }
+
+  return db.transaction('rw', [db.goals, db.transactions], async () => {
+    const goal = await db.goals.get(input.goalId);
+    if (!goal) {
+      throw new Error('Target tabungan tidak ditemukan.');
+    }
+    if (goal.status !== 'active') {
+      throw new Error('Hanya target aktif yang bisa diubah.');
+    }
+
+    const existingGoalTxs = await db.transactions
+      .where('goalId')
+      .equals(input.goalId)
+      .toArray();
+    const saved = computeGoalSaved(existingGoalTxs, input.goalId);
+    const lastMilestone = computeHighestMilestoneReached(
+      saved,
+      check.targetAmount
+    );
+
+    const updatedGoal: Goal = {
+      ...goal,
+      name: check.name,
+      targetAmount: check.targetAmount,
+      deadline: check.deadline,
+      lastMilestone,
+    };
+    GoalSchema.parse(updatedGoal);
+    await db.goals.put(updatedGoal);
+    return updatedGoal;
   });
 }
 

@@ -18,6 +18,7 @@ export interface GoalMetrics {
   remaining: number;
   percent: number;
   isAchieved: boolean;
+  isPastDeadline: boolean;
   daysLeft: number;
   perWeek: number | null;
   perMonth: number | null;
@@ -54,14 +55,16 @@ export function computeGoalMetrics(params: {
     Math.max(0, Math.floor((saved * 100) / goal.targetAmount))
   );
   const isAchieved = saved >= goal.targetAmount;
-  const daysLeft = Math.max(1, daysBetween(today, goal.deadline));
+  const rawDaysLeft = daysBetween(today, goal.deadline);
+  const isPastDeadline = rawDaysLeft <= 0;
+  const daysLeft = isPastDeadline ? 0 : rawDaysLeft;
 
   let perWeek: number | null = null;
   let perMonth: number | null = null;
   let dailyEffect: number | null = null;
   let isHeavy = false;
 
-  if (remaining > 0) {
+  if (remaining > 0 && !isPastDeadline) {
     const weeksLeft = Math.max(1, Math.ceil(daysLeft / 7));
     perWeek = roundUpThousand(remaining / weeksLeft);
 
@@ -96,6 +99,7 @@ export function computeGoalMetrics(params: {
     remaining,
     percent,
     isAchieved,
+    isPastDeadline,
     daysLeft,
     perWeek,
     perMonth,
@@ -143,6 +147,60 @@ export function detectGoalMilestone(
     }
   }
   return reached;
+}
+
+export function computeHighestMilestoneReached(
+  saved: number,
+  targetAmount: number
+): GoalMilestone {
+  if (targetAmount <= 0 || saved <= 0) return 0;
+  let highest: GoalMilestone = 0;
+  for (const milestone of GOAL_MILESTONES) {
+    if (saved * 100 >= targetAmount * milestone) {
+      highest = milestone;
+    }
+  }
+  return highest;
+}
+
+export function validateGoalInput(input: {
+  name: string;
+  targetAmount: number | null;
+  deadline: string;
+  today: string;
+}):
+  | { ok: true; name: string; targetAmount: number; deadline: string }
+  | { ok: false; error: string } {
+  const trimmedName = input.name.trim();
+  if (!trimmedName || trimmedName.length > 40) {
+    return {
+      ok: false,
+      error: 'Nama target wajib diisi (1 sampai 40 karakter).',
+    };
+  }
+  if (
+    input.targetAmount === null ||
+    !Number.isInteger(input.targetAmount) ||
+    input.targetAmount < MIN_GOAL_TARGET ||
+    input.targetAmount > MAX_GOAL_TARGET
+  ) {
+    return {
+      ok: false,
+      error: 'Nominal target antara Rp 10.000 sampai Rp 1.000.000.000.',
+    };
+  }
+  if (!input.deadline || daysBetween(input.today, input.deadline) < 1) {
+    return {
+      ok: false,
+      error: 'Tanggal target harus setelah hari ini.',
+    };
+  }
+  return {
+    ok: true,
+    name: trimmedName,
+    targetAmount: Math.trunc(input.targetAmount),
+    deadline: input.deadline,
+  };
 }
 
 export function pickPrimaryActiveGoal(goals: readonly Goal[]): Goal | null {

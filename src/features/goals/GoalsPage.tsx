@@ -11,6 +11,7 @@ import {
   MAX_GOAL_TARGET,
   MIN_GOAL_TARGET,
   computeGoalMetrics,
+  validateGoalInput,
 } from '../../domain/goals';
 import { formatFull, formatHeroShort, parseNominalInput } from '../../domain/money';
 import type { AppLiveState } from '../../hooks/useHomeState';
@@ -56,31 +57,23 @@ export function GoalsPage({ live }: GoalsPageProps) {
 
   const handleCreateGoal = async (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = nameInput.trim();
-    if (!trimmed || trimmed.length > 40) {
-      setFormError('Nama target wajib diisi (1 sampai 40 karakter).');
-      return;
-    }
-    if (
-      parsedTarget === null ||
-      !Number.isInteger(parsedTarget) ||
-      parsedTarget < MIN_GOAL_TARGET ||
-      parsedTarget > MAX_GOAL_TARGET
-    ) {
-      setFormError('Target nominal harus antara Rp 10.000 sampai Rp 1.000.000.000.');
-      return;
-    }
-    if (!deadlineInput || deadlineInput <= live.today) {
-      setFormError('Pilih tanggal target setelah hari ini.');
+    const check = validateGoalInput({
+      name: nameInput,
+      targetAmount: parsedTarget,
+      deadline: deadlineInput,
+      today: live.today,
+    });
+    if (!check.ok) {
+      setFormError(check.error);
       return;
     }
 
     try {
       const created = await createGoal({
-        name: trimmed,
-        targetAmount: parsedTarget,
+        name: check.name,
+        targetAmount: check.targetAmount,
         today: live.today,
-        deadline: deadlineInput,
+        deadline: check.deadline,
       });
       setIsCreateOpen(false);
       showToast({ message: `Target "${created.name}" dibuat` });
@@ -193,7 +186,9 @@ export function GoalsPage({ live }: GoalsPageProps) {
                             {goal.name}
                           </h2>
                           <p className="text-[12px] font-semibold text-[var(--muted)]">
-                            Target {formatShortDate(goal.deadline)} · {metrics.daysLeft} hari lagi
+                            {metrics.isPastDeadline
+                              ? `Lewat tanggal target (${formatShortDate(goal.deadline)})`
+                              : `Target ${formatShortDate(goal.deadline)} · ${metrics.daysLeft} hari lagi`}
                           </p>
                         </div>
                       </div>

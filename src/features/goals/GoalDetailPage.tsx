@@ -1,4 +1,4 @@
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
@@ -9,12 +9,16 @@ import {
   completeGoalWithPurchase,
   deleteGoalTransaction,
   depositToGoal,
+  updateGoal,
   withdrawFromGoal,
 } from '../../data/repositories/goals';
-import { formatShortDate } from '../../domain/dates';
+import { addDays, formatShortDate } from '../../domain/dates';
 import {
+  MAX_GOAL_TARGET,
+  MIN_GOAL_TARGET,
   computeGoalMetrics,
   previewGoalDepositAllowance,
+  validateGoalInput,
 } from '../../domain/goals';
 import { formatFull, formatHeroShort, formatShort, parseNominalInput } from '../../domain/money';
 import type { Transaction } from '../../domain/types';
@@ -43,6 +47,12 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
 
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editNameInput, setEditNameInput] = useState('');
+  const [editTargetInput, setEditTargetInput] = useState('');
+  const [editDeadlineInput, setEditDeadlineInput] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
 
   const goal = live.goals.find((g) => g.id === id) ?? null;
 
@@ -73,6 +83,7 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
   const goalTxs = live.transactions.filter((tx) => tx.goalId === goal.id);
   const parsedDeposit = parseNominalInput(depositInput);
   const parsedWithdraw = parseNominalInput(withdrawInput);
+  const parsedEditTarget = parseNominalInput(editTargetInput);
 
   const allowancePreview = previewGoalDepositAllowance({
     currentBalance: live.homeState.currentBalance,
@@ -80,6 +91,43 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
     daysLeft: Math.max(1, live.homeState.daysLeft),
     depositAmount: parsedDeposit && parsedDeposit > 0 ? parsedDeposit : 0,
   });
+
+  const openEditSheet = () => {
+    setEditNameInput(goal.name);
+    setEditTargetInput(String(goal.targetAmount));
+    setEditDeadlineInput(goal.deadline);
+    setEditError(null);
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const check = validateGoalInput({
+      name: editNameInput,
+      targetAmount: parsedEditTarget,
+      deadline: editDeadlineInput,
+      today: live.today,
+    });
+    if (!check.ok) {
+      setEditError(check.error);
+      return;
+    }
+
+    try {
+      await updateGoal({
+        goalId: goal.id,
+        name: check.name,
+        targetAmount: check.targetAmount,
+        deadline: check.deadline,
+        today: live.today,
+      });
+      setIsEditOpen(false);
+    } catch (err: unknown) {
+      setEditError(
+        err instanceof Error ? err.message : 'Gagal mengubah target tabungan.'
+      );
+    }
+  };
 
   const openDepositSheet = () => {
     const available = Math.max(0, live.homeState.currentBalance);
@@ -250,27 +298,43 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold text-[var(--muted)]">
           <span>dari target {formatFull(goal.targetAmount)}</span>
-          {goal.status === 'active' && (
+          {goal.status === 'active' && !metrics.isPastDeadline && (
             <span>
               Tenggat {formatShortDate(goal.deadline)} ({metrics.daysLeft} hari lagi)
             </span>
           )}
         </div>
 
-        <div className="rounded-[16px] bg-[var(--bg)] p-3">
-          <p className="text-[13px] font-extrabold text-[var(--ink)]">
-            {metrics.trackStatus}
-          </p>
-          <p className="mt-0.5 text-[12px] font-medium text-[var(--muted)]">
-            Acuan rencana hari ini: {formatFull(metrics.expectedSaved)} (hari ke-
-            {metrics.elapsedDays} dari {metrics.totalDays}), tersimpan{' '}
-            {formatFull(metrics.saved)}.
-          </p>
-        </div>
+        {goal.status === 'active' && metrics.isPastDeadline ? (
+          <div className="flex items-center justify-between gap-3 rounded-[16px] bg-[var(--status-hampir-bg)] p-3">
+            <p className="text-[13px] font-bold text-[var(--status-hampir)]">
+              Lewat tanggal target. Mau ubah tanggalnya?
+            </p>
+            <button
+              type="button"
+              onClick={openEditSheet}
+              className="min-h-[44px] shrink-0 rounded-[14px] border border-[var(--border-control)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--ink)]"
+            >
+              Ubah tanggal
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-[16px] bg-[var(--bg)] p-3">
+            <p className="text-[13px] font-extrabold text-[var(--ink)]">
+              {metrics.trackStatus}
+            </p>
+            <p className="mt-0.5 text-[12px] font-medium text-[var(--muted)]">
+              Acuan rencana hari ini: {formatFull(metrics.expectedSaved)} (hari ke-
+              {metrics.elapsedDays} dari {metrics.totalDays}), tersimpan{' '}
+              {formatFull(metrics.saved)}.
+            </p>
+          </div>
+        )}
       </section>
 
-      {/* Suggestion card when active and remaining > 0 */}
+      {/* Suggestion card when active, not overdue, and remaining > 0 */}
       {goal.status === 'active' &&
+        !metrics.isPastDeadline &&
         metrics.remaining > 0 &&
         metrics.perWeek !== null &&
         metrics.perMonth !== null &&
@@ -339,6 +403,15 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
             className="min-h-[48px] rounded-[20px] border border-[var(--border-control)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--ink)]"
           >
             Arsipkan
+          </button>
+
+          <button
+            type="button"
+            onClick={openEditSheet}
+            className="col-span-2 inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] border border-[var(--border-control)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] hover:bg-[var(--border-soft)]"
+          >
+            <Pencil size={15} strokeWidth={2.2} aria-hidden="true" />
+            <span>Ubah</span>
           </button>
         </section>
       )}
@@ -551,6 +624,120 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
             </button>
           </div>
         </div>
+      </Sheet>
+
+      {/* Edit goal sheet */}
+      <Sheet
+        open={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        title="Ubah Target Tabungan"
+      >
+        <form onSubmit={(e) => void handleEditSubmit(e)} className="space-y-4" noValidate>
+          <div>
+            <label
+              htmlFor="edit-goal-name-input"
+              className="mb-1 block text-[13px] font-bold text-[var(--ink)]"
+            >
+              Nama target
+            </label>
+            <input
+              id="edit-goal-name-input"
+              name="goalName"
+              type="text"
+              maxLength={40}
+              value={editNameInput}
+              onChange={(e) => {
+                setEditNameInput(e.target.value);
+                if (editError) setEditError(null);
+              }}
+              aria-describedby={editError ? 'edit-goal-error' : undefined}
+              placeholder="Contoh: Dana darurat atau Ganti SSD"
+              className="min-h-[48px] w-full rounded-[16px] border border-[var(--border-control)] bg-[var(--bg)] px-3.5 text-[15px] font-semibold text-[var(--ink)]"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="edit-goal-target-input"
+              className="mb-1 block text-[13px] font-bold text-[var(--ink)]"
+            >
+              Nominal target (Rp 10rb sampai Rp 1M)
+            </label>
+            <input
+              id="edit-goal-target-input"
+              name="goalTargetAmount"
+              type="text"
+              inputMode="numeric"
+              value={editTargetInput}
+              onChange={(e) => {
+                setEditTargetInput(e.target.value);
+                if (editError) setEditError(null);
+              }}
+              aria-describedby={editError ? 'edit-goal-error' : undefined}
+              placeholder="Contoh: 3jt atau 500rb"
+              className="min-h-[48px] w-full rounded-[16px] border border-[var(--border-control)] bg-[var(--bg)] px-3.5 text-[16px] font-bold text-[var(--ink)]"
+            />
+            {parsedEditTarget !== null &&
+              parsedEditTarget >= MIN_GOAL_TARGET &&
+              parsedEditTarget <= MAX_GOAL_TARGET && (
+                <p className="mt-1 text-[12px] font-bold text-[var(--primary)]">
+                  {formatFull(parsedEditTarget)}
+                </p>
+              )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="edit-goal-deadline-input"
+              className="mb-1 block text-[13px] font-bold text-[var(--ink)]"
+            >
+              Tanggal target tercapai
+            </label>
+            <input
+              id="edit-goal-deadline-input"
+              name="goalDeadline"
+              type="date"
+              min={addDays(live.today, 1)}
+              value={editDeadlineInput}
+              onChange={(e) => {
+                setEditDeadlineInput(e.target.value);
+                if (editError) setEditError(null);
+              }}
+              aria-describedby={editError ? 'edit-goal-error' : undefined}
+              className="min-h-[48px] w-full rounded-[16px] border border-[var(--border-control)] bg-[var(--bg)] px-3.5 text-[15px] font-semibold text-[var(--ink)]"
+            />
+          </div>
+
+          {editError && (
+            <p
+              id="edit-goal-error"
+              role="alert"
+              className="text-[13px] font-bold text-[var(--warm-ink)]"
+            >
+              {editError}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsEditOpen(false)}
+              className="min-h-[48px] rounded-[20px] border border-[var(--border-control)] px-4 text-[14px] font-bold text-[var(--ink)]"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              style={{
+                backgroundColor: 'var(--primary)',
+                color: 'var(--on-primary)',
+              }}
+              className="min-h-[48px] rounded-[20px] px-5 text-[14px] font-extrabold"
+            >
+              Simpan perubahan
+            </button>
+          </div>
+        </form>
       </Sheet>
 
       {/* Delete goal entry confirmation sheet */}

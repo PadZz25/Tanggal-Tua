@@ -15,8 +15,11 @@ import {
   parseNominalInput,
 } from '../../domain/money';
 import { getSelectableCategories } from '../../domain/parser/keywords';
-import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
-import type { Budget, Category, DayMark, Transaction } from '../../domain/types';
+import {
+  GOAL_TX_LOCKED_MESSAGE,
+  isLinkedGoalTransaction,
+} from '../../domain/savings';
+import type { Budget, Category, DayMark, Goal, Transaction } from '../../domain/types';
 import { useUIStore } from '../../hooks/useUIStore';
 import { triggerHaptic } from '../../lib/haptics';
 import { runNewTransactionEffects } from './postSaveEffects';
@@ -26,6 +29,7 @@ interface TransactionSheetProps {
   openingDate: string;
   categories: Category[];
   transactions: Transaction[];
+  goals?: Goal[];
   dayMarks?: DayMark[];
   budgets?: Budget[];
   lastCelebratedStreak?: number;
@@ -36,6 +40,7 @@ export function TransactionSheet({
   openingDate,
   categories,
   transactions,
+  goals = [],
   dayMarks = [],
   budgets = [],
   lastCelebratedStreak = 0,
@@ -44,6 +49,7 @@ export function TransactionSheet({
     () => new Map(categories.map((c) => [c.id, c])),
     [categories]
   );
+  const goalIds = useMemo(() => new Set(goals.map((g) => g.id)), [goals]);
   const isOpen = useUIStore((s) => s.isTransactionSheetOpen);
   const editingId = useUIStore((s) => s.editingTransactionId);
   const defaultType = useUIStore((s) => s.defaultTransactionType);
@@ -54,6 +60,9 @@ export function TransactionSheet({
   const editingTx = editingId
     ? transactions.find((t) => t.id === editingId) ?? null
     : null;
+  const isEditingLinkedGoalTx = editingTx
+    ? isLinkedGoalTransaction(editingTx, goalIds)
+    : false;
 
   const [txType, setTxType] = useState<'expense' | 'income'>('expense');
   const [amountInput, setAmountInput] = useState('');
@@ -79,11 +88,19 @@ export function TransactionSheet({
 
     if (editingTx) {
       const normalizedType = editingTx.type === 'income' ? 'income' : 'expense';
+      const selectableForType = getSelectableCategories(categories, normalizedType);
+      const hasSelectableCategory = Boolean(
+        editingTx.categoryId &&
+          selectableForType.some((c) => c.id === editingTx.categoryId)
+      );
       setTxType(normalizedType);
       setAmountInput(String(Math.abs(editingTx.amount)));
       setCategoryId(
-        editingTx.categoryId ??
-          (normalizedType === 'income' ? 'cat-kiriman-ortu' : 'cat-makan')
+        hasSelectableCategory && editingTx.categoryId
+          ? editingTx.categoryId
+          : normalizedType === 'income'
+            ? 'cat-kiriman-ortu'
+            : 'cat-makan'
       );
       setNote(editingTx.note);
       setDate(editingTx.date);
@@ -95,7 +112,7 @@ export function TransactionSheet({
       setNote('');
       setDate(today);
     }
-  }, [isOpen, editingId, editingTx, defaultType, today]);
+  }, [isOpen, editingId, editingTx, defaultType, today, categories]);
 
   const handleTypeSwitch = (nextType: 'expense' | 'income') => {
     setTxType(nextType);
@@ -110,7 +127,7 @@ export function TransactionSheet({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (editingTx?.goalId) {
+    if (isEditingLinkedGoalTx) {
       setErrorMsg(GOAL_TX_LOCKED_MESSAGE);
       return;
     }
@@ -149,6 +166,7 @@ export function TransactionSheet({
             ? -parsedAmount
             : parsedAmount,
         categoryId: editingTx.type === 'adjustment' ? null : categoryId,
+        goalId: editingTx.goalId && !isEditingLinkedGoalTx ? null : editingTx.goalId,
         note: finalNote,
         date,
       });
@@ -189,7 +207,7 @@ export function TransactionSheet({
 
   const handleDelete = async () => {
     if (!editingTx) return;
-    if (editingTx.goalId) {
+    if (isEditingLinkedGoalTx) {
       showToast({ message: GOAL_TX_LOCKED_MESSAGE });
       closeSheet();
       return;

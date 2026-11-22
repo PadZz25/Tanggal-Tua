@@ -1,14 +1,17 @@
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, EyeOff, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Sheet } from '../../components/ui/Sheet';
 import {
   archiveGoal,
   completeGoalWithPurchase,
+  deleteGoalPermanently,
   deleteGoalTransaction,
   depositToGoal,
+  hideCompletedGoal,
+  restoreDeletedGoalSnapshot,
   updateGoal,
   withdrawFromGoal,
 } from '../../data/repositories/goals';
@@ -33,6 +36,7 @@ interface GoalDetailPageProps {
 
 export function GoalDetailPage({ live }: GoalDetailPageProps) {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const showToast = useUIStore((s) => s.showToast);
   const triggerMascotReaction = useUIStore((s) => s.triggerMascotReaction);
   const setMascotCelebration = useUIStore((s) => s.setMascotCelebration);
@@ -46,13 +50,21 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+  const cancelDeleteBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editNameInput, setEditNameInput] = useState('');
   const [editTargetInput, setEditTargetInput] = useState('');
   const [editDeadlineInput, setEditDeadlineInput] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isDeleteOpen) {
+      cancelDeleteBtnRef.current?.focus();
+    }
+  }, [isDeleteOpen]);
 
   const goal = live.goals.find((g) => g.id === id) ?? null;
 
@@ -216,12 +228,39 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
   const handleConfirmArchive = async () => {
     const res = await archiveGoal(goal.id, live.today);
     setIsArchiveOpen(false);
+    setIsDeleteOpen(false);
     showToast({
       message:
         res.refundedAmount > 0
           ? `Diarsipkan · ${formatFull(res.refundedAmount)} kembali ke saldo`
           : `Target "${goal.name}" diarsipkan`,
     });
+  };
+
+  const handleConfirmPermanentDelete = async () => {
+    try {
+      const snapshot = await deleteGoalPermanently(goal.id);
+      setIsDeleteOpen(false);
+      showToast({
+        message: 'Target dihapus',
+        onUndo: async () => {
+          await restoreDeletedGoalSnapshot(snapshot);
+        },
+      });
+      navigate('/target');
+    } catch (err: unknown) {
+      setIsDeleteOpen(false);
+      showToast({
+        message:
+          err instanceof Error ? err.message : 'Target tidak bisa dihapus.',
+      });
+    }
+  };
+
+  const handleHideCompleted = async () => {
+    await hideCompletedGoal(goal.id);
+    showToast({ message: 'Target disembunyikan' });
+    navigate('/target');
   };
 
   const handleConfirmDeleteTx = async () => {
@@ -408,10 +447,51 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
           <button
             type="button"
             onClick={openEditSheet}
-            className="col-span-2 inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] border border-[var(--border-control)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] hover:bg-[var(--border-soft)]"
+            className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] border border-[var(--border-control)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] hover:bg-[var(--border-soft)]"
           >
             <Pencil size={15} strokeWidth={2.2} aria-hidden="true" />
             <span>Ubah</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsDeleteOpen(true)}
+            className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] border border-[var(--warm-ink)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--warm-ink)] hover:bg-[var(--border-soft)]"
+          >
+            <Trash2 size={15} strokeWidth={2.2} aria-hidden="true" />
+            <span>Hapus</span>
+          </button>
+        </section>
+      )}
+
+      {goal.status === 'completed' && (
+        <section
+          aria-label="Aksi target selesai"
+          className="space-y-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
+        >
+          <p className="text-[13px] font-medium leading-relaxed text-[var(--muted)]">
+            Target yang sudah terpakai disimpan sebagai riwayat karena uangnya sudah terpakai.
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleHideCompleted()}
+            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[20px] border border-[var(--border-control)] bg-[var(--bg)] px-4 text-[13px] font-extrabold text-[var(--ink)] hover:bg-[var(--border-soft)]"
+          >
+            <EyeOff size={15} strokeWidth={2.2} aria-hidden="true" />
+            <span>Sembunyikan</span>
+          </button>
+        </section>
+      )}
+
+      {goal.status === 'archived' && (
+        <section aria-label="Aksi target diarsipkan">
+          <button
+            type="button"
+            onClick={() => setIsDeleteOpen(true)}
+            className="inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[20px] border border-[var(--warm-ink)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--warm-ink)] hover:bg-[var(--border-soft)]"
+          >
+            <Trash2 size={15} strokeWidth={2.2} aria-hidden="true" />
+            <span>Hapus</span>
           </button>
         </section>
       )}
@@ -448,14 +528,16 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
                       ? `+${formatFull(tx.amount)}`
                       : formatFull(-tx.amount)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setDeletingTx(tx)}
-                    aria-label={`Hapus entri ${tx.note}`}
-                    className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--muted)] hover:bg-[var(--border-soft)] hover:text-[var(--warm-ink)]"
-                  >
-                    <Trash2 size={16} aria-hidden="true" />
-                  </button>
+                  {goal.status === 'active' && (
+                    <button
+                      type="button"
+                      onClick={() => setDeletingTx(tx)}
+                      aria-label={`Hapus entri ${tx.note}`}
+                      className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--muted)] hover:bg-[var(--border-soft)] hover:text-[var(--warm-ink)]"
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -738,6 +820,104 @@ export function GoalDetailPage({ live }: GoalDetailPageProps) {
             </button>
           </div>
         </form>
+      </Sheet>
+
+      {/* Delete goal confirmation sheet */}
+      <Sheet
+        open={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        title="Hapus target?"
+      >
+        <div className="space-y-4">
+          {goal.status === 'active' && goalTxs.length === 0 && (
+            <>
+              <p className="text-[14px] font-medium text-[var(--ink)]">
+                Hapus target "{goal.name}"? Belum ada tabungan di target ini.
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  ref={cancelDeleteBtnRef}
+                  type="button"
+                  onClick={() => setIsDeleteOpen(false)}
+                  className="min-h-[48px] rounded-[20px] border border-[var(--border-control)] px-4 text-[14px] font-bold text-[var(--ink)]"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmPermanentDelete()}
+                  className="min-h-[48px] rounded-[20px] border border-[var(--warm-ink)] bg-[var(--surface)] px-5 text-[14px] font-extrabold text-[var(--warm-ink)]"
+                >
+                  Hapus permanen
+                </button>
+              </div>
+            </>
+          )}
+
+          {goal.status === 'active' && goalTxs.length > 0 && (
+            <>
+              <p className="text-[14px] font-medium text-[var(--ink)]">
+                {metrics.saved > 0
+                  ? `${formatHeroShort(metrics.saved)} akan dikembalikan ke saldo dan semua riwayat setoran/penarikan target ini ikut terhapus.`
+                  : 'Semua riwayat setoran/penarikan target ini ikut terhapus dan saldo tidak berubah.'}
+              </p>
+              <p className="text-[13px] font-medium text-[var(--muted)]">
+                Pilih Arsipkan bila ingin uang kembali lewat transaksi Tarik tabungan dan riwayat tetap tersimpan.
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  ref={cancelDeleteBtnRef}
+                  type="button"
+                  onClick={() => setIsDeleteOpen(false)}
+                  className="min-h-[48px] rounded-[20px] border border-[var(--border-control)] px-4 text-[14px] font-bold text-[var(--ink)]"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmArchive()}
+                  className="min-h-[48px] rounded-[20px] border border-[var(--border-control)] bg-[var(--surface)] px-4 text-[14px] font-extrabold text-[var(--ink)]"
+                >
+                  Arsipkan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmPermanentDelete()}
+                  className="min-h-[48px] rounded-[20px] border border-[var(--warm-ink)] bg-[var(--surface)] px-5 text-[14px] font-extrabold text-[var(--warm-ink)]"
+                >
+                  Hapus permanen
+                </button>
+              </div>
+            </>
+          )}
+
+          {goal.status === 'archived' && (
+            <>
+              <p className="text-[14px] font-medium text-[var(--ink)]">
+                {metrics.saved > 0
+                  ? `Hapus target "${goal.name}"? ${formatHeroShort(metrics.saved)} akan dikembalikan ke saldo dan semua riwayat setoran/penarikan target ini ikut terhapus.`
+                  : `Hapus target "${goal.name}" beserta riwayatnya secara permanen?`}
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  ref={cancelDeleteBtnRef}
+                  type="button"
+                  onClick={() => setIsDeleteOpen(false)}
+                  className="min-h-[48px] rounded-[20px] border border-[var(--border-control)] px-4 text-[14px] font-bold text-[var(--ink)]"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmPermanentDelete()}
+                  className="min-h-[48px] rounded-[20px] border border-[var(--warm-ink)] bg-[var(--surface)] px-5 text-[14px] font-extrabold text-[var(--warm-ink)]"
+                >
+                  Hapus permanen
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </Sheet>
 
       {/* Delete goal entry confirmation sheet */}

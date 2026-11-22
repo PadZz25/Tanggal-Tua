@@ -1,18 +1,21 @@
 import { Link } from 'react-router-dom';
 import { Mascot } from '../../components/brand/Mascot';
 import { UI_STRINGS } from '../../domain/copy';
+import { isLinkedGoalTransaction } from '../../domain/savings';
 import type { Category, Transaction } from '../../domain/types';
 import { TransactionRow } from '../transactions/TransactionRow';
 
 interface TodayListProps {
   transactions: Transaction[];
   categoryMap: Map<string, Category>;
+  goalIds?: ReadonlySet<string>;
   onSelectTransaction: (tx: Transaction) => void;
 }
 
 export function TodayList({
   transactions,
   categoryMap,
+  goalIds = new Set(),
   onSelectTransaction,
 }: TodayListProps) {
   const recentToday = transactions.slice(0, 3);
@@ -45,6 +48,7 @@ export function TodayList({
               key={tx.id}
               transaction={tx}
               category={tx.categoryId ? categoryMap.get(tx.categoryId) : undefined}
+              isGoalLinked={isLinkedGoalTransaction(tx, goalIds)}
               onSelect={onSelectTransaction}
             />
           ))}

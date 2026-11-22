@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
+import { createGoal } from '../../data/repositories/goals';
 import {
   completeOnboarding,
   getSettings,
@@ -278,12 +279,18 @@ describe('History & Settings pages (Milestone M5)', () => {
 
   it('labels goal-linked transactions with Tabungan and prevents edit or delete from Riwayat', async () => {
     const user = userEvent.setup();
+    const goal = await createGoal({
+      name: 'Laptop kuliah',
+      targetAmount: 3_000_000,
+      today: '2026-11-18',
+      deadline: '2026-12-20',
+    });
 
     await createTransaction({
       type: 'expense',
       amount: 100_000,
       categoryId: SYSTEM_CATEGORY_SAVING_ID,
-      goalId: 'goal-test',
+      goalId: goal.id,
       note: 'Sisihkan laptop',
       date: '2026-11-18',
       source: 'form',

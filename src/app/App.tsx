@@ -86,6 +86,7 @@ export function AppRoutes() {
         openingDate={live.settings.openingDate}
         categories={live.categories}
         transactions={live.transactions}
+        goals={live.goals}
         dayMarks={live.dayMarks}
         budgets={live.budgets}
         lastCelebratedStreak={live.settings.lastCelebratedStreak}

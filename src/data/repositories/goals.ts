@@ -230,11 +230,20 @@ export async function withdrawFromGoal(params: {
   });
 }
 
+export interface DeletedGoalSnapshot {
+  goal: Goal;
+  transactions: Transaction[];
+}
+
 export async function deleteGoalTransaction(
   goalId: string,
   txId: string
 ): Promise<void> {
-  await db.transaction('rw', db.transactions, async () => {
+  await db.transaction('rw', [db.goals, db.transactions], async () => {
+    const goal = await db.goals.get(goalId);
+    if (!goal || goal.status !== 'active') {
+      throw new Error('Riwayat target yang sudah selesai atau diarsipkan tidak bisa diubah.');
+    }
     const goalTxs = await db.transactions
       .where('goalId')
       .equals(goalId)
@@ -252,6 +261,19 @@ export async function completeGoalWithPurchase(goalId: string): Promise<void> {
   await db.goals.update(goalId, { status: 'completed' });
 }
 
+export async function hideCompletedGoal(goalId: string): Promise<void> {
+  await db.transaction('rw', db.goals, async () => {
+    const goal = await db.goals.get(goalId);
+    if (!goal) {
+      throw new Error('Target tabungan tidak ditemukan.');
+    }
+    if (goal.status !== 'completed') {
+      throw new Error('Hanya target yang sudah selesai dibeli yang bisa disembunyikan.');
+    }
+    await db.goals.update(goalId, { status: 'archived' });
+  });
+}
+
 export async function archiveGoal(
   goalId: string,
   todayDate: string
@@ -260,6 +282,11 @@ export async function archiveGoal(
     const goal = await db.goals.get(goalId);
     if (!goal) {
       throw new Error('Target tabungan tidak ditemukan.');
+    }
+
+    if (goal.status === 'completed') {
+      await db.goals.update(goalId, { status: 'archived' });
+      return { refundedAmount: 0 };
     }
 
     const existingGoalTxs = await db.transactions
@@ -282,5 +309,45 @@ export async function archiveGoal(
 
     await db.goals.update(goalId, { status: 'archived' });
     return { refundedAmount: Math.max(0, saved) };
+  });
+}
+
+export async function deleteGoalPermanently(
+  goalId: string
+): Promise<DeletedGoalSnapshot> {
+  return db.transaction('rw', [db.goals, db.transactions], async () => {
+    const goal = await db.goals.get(goalId);
+    if (!goal) {
+      throw new Error('Target tabungan tidak ditemukan.');
+    }
+    if (goal.status === 'completed') {
+      throw new Error(
+        'Target yang sudah terpakai tidak bisa dihapus permanen karena uangnya sudah terpakai.'
+      );
+    }
+
+    const transactions = await db.transactions
+      .where('goalId')
+      .equals(goalId)
+      .toArray();
+    await db.transactions.where('goalId').equals(goalId).delete();
+    await db.goals.delete(goalId);
+
+    return { goal, transactions };
+  });
+}
+
+export async function restoreDeletedGoalSnapshot(
+  snapshot: DeletedGoalSnapshot
+): Promise<void> {
+  await db.transaction('rw', [db.goals, db.transactions], async () => {
+    GoalSchema.parse(snapshot.goal);
+    await db.goals.put(snapshot.goal);
+    if (snapshot.transactions.length > 0) {
+      for (const tx of snapshot.transactions) {
+        TransactionSchema.parse(tx);
+      }
+      await db.transactions.bulkPut(snapshot.transactions);
+    }
   });
 }

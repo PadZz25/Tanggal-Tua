@@ -61,3 +61,10 @@ export function canDeleteGoalTransaction(
   const remaining = transactions.filter((tx) => tx.id !== txId);
   return computeGoalSaved(remaining, goalId) >= 0;
 }
+
+export function isLinkedGoalTransaction(
+  tx: Pick<Transaction, 'goalId'>,
+  existingGoalIds: ReadonlySet<string>
+): boolean {
+  return Boolean(tx.goalId && existingGoalIds.has(tx.goalId));
+}

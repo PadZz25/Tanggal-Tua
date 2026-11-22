@@ -13,7 +13,10 @@ import {
   formatShortDate,
 } from '../../domain/dates';
 import { formatShort } from '../../domain/money';
-import { GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
+import {
+  GOAL_TX_LOCKED_MESSAGE,
+  isLinkedGoalTransaction,
+} from '../../domain/savings';
 import type { Transaction } from '../../domain/types';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { useUIStore } from '../../hooks/useUIStore';
@@ -100,23 +103,28 @@ export function HistoryPage({ live }: HistoryPageProps) {
     });
   }, [live.transactions, filter, kategoriParam, validDari, validSampai]);
 
+  const goalIds = useMemo(
+    () => new Set(live.goals.map((g) => g.id)),
+    [live.goals]
+  );
+
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, { items: Transaction[]; totalExpense: number }>();
 
     for (const tx of filteredTransactions) {
       const existing = groups.get(tx.date) ?? { items: [], totalExpense: 0 };
       existing.items.push(tx);
-      if (tx.type === 'expense' && !tx.goalId) {
+      if (tx.type === 'expense' && !isLinkedGoalTransaction(tx, goalIds)) {
         existing.totalExpense += tx.amount;
       }
       groups.set(tx.date, existing);
     }
 
     return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [filteredTransactions]);
+  }, [filteredTransactions, goalIds]);
 
   const handleSelectTransaction = (tx: Transaction) => {
-    if (tx.goalId) {
+    if (isLinkedGoalTransaction(tx, goalIds)) {
       showToast({ message: GOAL_TX_LOCKED_MESSAGE });
       return;
     }
@@ -124,7 +132,7 @@ export function HistoryPage({ live }: HistoryPageProps) {
   };
 
   const handleQuickDelete = async (tx: Transaction) => {
-    if (tx.goalId) {
+    if (isLinkedGoalTransaction(tx, goalIds)) {
       showToast({ message: GOAL_TX_LOCKED_MESSAGE });
       return;
     }
@@ -246,6 +254,7 @@ export function HistoryPage({ live }: HistoryPageProps) {
                         category={
                           tx.categoryId ? live.categoryMap.get(tx.categoryId) : undefined
                         }
+                        isGoalLinked={isLinkedGoalTransaction(tx, goalIds)}
                         onSelect={handleSelectTransaction}
                       />
                     </div>

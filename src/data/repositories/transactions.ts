@@ -42,7 +42,9 @@ export async function createTransaction(input: {
 
 export async function updateTransaction(
   id: string,
-  patch: Partial<Pick<Transaction, 'type' | 'amount' | 'categoryId' | 'note' | 'date'>>
+  patch: Partial<
+    Pick<Transaction, 'type' | 'amount' | 'categoryId' | 'goalId' | 'note' | 'date'>
+  >
 ): Promise<Transaction | null> {
   const existing = await db.transactions.get(id);
   if (!existing) return null;

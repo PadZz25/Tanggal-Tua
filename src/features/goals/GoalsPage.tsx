@@ -36,13 +36,19 @@ export function GoalsPage({ live }: GoalsPageProps) {
   const [targetInput, setTargetInput] = useState('');
   const [deadlineInput, setDeadlineInput] = useState(() => addDays(live.today, 30));
   const [formError, setFormError] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const activeGoals = live.goals
     .filter((g) => g.status === 'active')
     .sort((a, b) => a.deadline.localeCompare(b.deadline));
-  const pastGoals = live.goals
-    .filter((g) => g.status !== 'active')
+  const completedGoals = live.goals
+    .filter((g) => g.status === 'completed')
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const archivedGoals = live.goals
+    .filter((g) => g.status === 'archived')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const hasVisibleGoals = activeGoals.length > 0 || completedGoals.length > 0;
 
   const canCreateMore = activeGoals.length < MAX_ACTIVE_GOALS;
   const parsedTarget = parseNominalInput(targetInput);
@@ -135,26 +141,28 @@ export function GoalsPage({ live }: GoalsPageProps) {
         </p>
       )}
 
-      {live.goals.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] border border-[var(--border)] bg-[var(--surface)] px-5 py-10 text-center">
-          <Mascot mood="smile" size={52} />
-          <p className="mt-3 text-[15px] font-extrabold text-[var(--ink)]">
-            Belum ada target tabungan
-          </p>
-          <p className="mt-1 text-[13px] font-medium text-[var(--muted)]">
-            Sisihkan sedikit demi sedikit tanpa bikin jatah hari ini langsung terpukul.
-          </p>
-          <button
-            type="button"
-            onClick={openCreateSheet}
-            style={{
-              backgroundColor: 'var(--primary)',
-              color: 'var(--on-primary)',
-            }}
-            className="mt-4 min-h-[48px] rounded-[22px] px-5 text-[14px] font-extrabold"
-          >
-            Buat target pertama
-          </button>
+      {!hasVisibleGoals ? (
+        <div className="space-y-4">
+          <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] border border-[var(--border)] bg-[var(--surface)] px-5 py-10 text-center">
+            <Mascot mood="smile" size={52} />
+            <p className="mt-3 text-[15px] font-extrabold text-[var(--ink)]">
+              Belum ada target tabungan
+            </p>
+            <p className="mt-1 text-[13px] font-medium text-[var(--muted)]">
+              Sisihkan sedikit demi sedikit tanpa bikin jatah hari ini langsung terpukul.
+            </p>
+            <button
+              type="button"
+              onClick={openCreateSheet}
+              style={{
+                backgroundColor: 'var(--primary)',
+                color: 'var(--on-primary)',
+              }}
+              className="mt-4 min-h-[48px] rounded-[22px] px-5 text-[14px] font-extrabold"
+            >
+              Buat target pertama
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -227,13 +235,13 @@ export function GoalsPage({ live }: GoalsPageProps) {
             </section>
           )}
 
-          {pastGoals.length > 0 && (
-            <section aria-label="Riwayat target selesai dan arsip" className="space-y-2">
+          {completedGoals.length > 0 && (
+            <section aria-label="Target selesai" className="space-y-2">
               <h2 className="px-1 text-[13px] font-extrabold text-[var(--muted)]">
-                Selesai & Arsip
+                Selesai
               </h2>
               <div className="space-y-2">
-                {pastGoals.map((goal) => (
+                {completedGoals.map((goal) => (
                   <Link
                     key={goal.id}
                     to={`/target/${goal.id}`}
@@ -251,6 +259,43 @@ export function GoalsPage({ live }: GoalsPageProps) {
                   </Link>
                 ))}
               </div>
+            </section>
+          )}
+        </div>
+      )}
+
+      {archivedGoals.length > 0 && (
+        <div className="space-y-2 pt-1">
+          <button
+            type="button"
+            aria-expanded={showArchived}
+            onClick={() => setShowArchived((prev) => !prev)}
+            className="inline-flex min-h-[44px] items-center rounded-xl px-1 text-[13px] font-bold text-[var(--primary)] hover:underline"
+          >
+            {showArchived
+              ? 'Sembunyikan arsip'
+              : `Lihat arsip (${archivedGoals.length})`}
+          </button>
+
+          {showArchived && (
+            <section aria-label="Target diarsipkan" className="space-y-2">
+              {archivedGoals.map((goal) => (
+                <Link
+                  key={goal.id}
+                  to={`/target/${goal.id}`}
+                  className="flex min-h-[56px] items-center justify-between gap-3 rounded-[20px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 hover:border-[var(--border-control)]"
+                >
+                  <div>
+                    <p className="text-[14px] font-bold text-[var(--ink)]">{goal.name}</p>
+                    <p className="text-[12px] font-medium text-[var(--muted)]">
+                      {formatHeroShort(goal.targetAmount)}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--muted)]">
+                    {STATUS_BADGE[goal.status]}
+                  </span>
+                </Link>
+              ))}
             </section>
           )}
         </div>

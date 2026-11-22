@@ -5,6 +5,7 @@ import type { Category, Transaction } from '../../domain/types';
 interface TransactionRowProps {
   transaction: Transaction;
   category?: Category;
+  isGoalLinked?: boolean;
   onSelect: (tx: Transaction) => void;
 }
 
@@ -19,6 +20,7 @@ function formatTimeHHMM(isoString: string): string {
 export function TransactionRow({
   transaction,
   category,
+  isGoalLinked = Boolean(transaction.goalId),
   onSelect,
 }: TransactionRowProps) {
   const isIncome =
@@ -63,7 +65,7 @@ export function TransactionRow({
             <p className="truncate text-[15px] font-bold text-[var(--ink)]">
               {transaction.note}
             </p>
-            {transaction.goalId && (
+            {isGoalLinked && (
               <span className="shrink-0 rounded-full bg-[var(--primary-tint)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary)]">
                 Tabungan
               </span>

@@ -22,7 +22,7 @@ import {
   shouldShowDailyReminder,
   writeDismissedReminderDate,
 } from '../../domain/reminder';
-import { computeGoalSaved, GOAL_TX_LOCKED_MESSAGE } from '../../domain/savings';
+import { computeGoalSaved, GOAL_TX_LOCKED_MESSAGE, isLinkedGoalTransaction } from '../../domain/savings';
 import { useCurrentMinutes } from '../../hooks/useCurrentMinutes';
 import type { AppLiveState } from '../../hooks/useHomeState';
 import { useUIStore } from '../../hooks/useUIStore';
@@ -344,8 +344,10 @@ export function HomePage({ live }: HomePageProps) {
       <TodayList
         transactions={live.todayTransactions}
         categoryMap={live.categoryMap}
+        goalIds={new Set(live.goals.map((g) => g.id))}
         onSelectTransaction={(tx) => {
-          if (tx.goalId) {
+          const goalIds = new Set(live.goals.map((g) => g.id));
+          if (isLinkedGoalTransaction(tx, goalIds)) {
             showToast({ message: GOAL_TX_LOCKED_MESSAGE });
             return;
           }

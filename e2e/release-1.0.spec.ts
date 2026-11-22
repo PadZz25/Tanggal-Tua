@@ -126,7 +126,7 @@ test.describe('Tanggal Tua 1.0.0 Full E2E & Accessibility Suite', () => {
 
     await page.getByRole('link', { name: 'Pengaturan' }).click();
     const aboutHeading = page.getByRole('heading', {
-      name: /Tanggal Tua · Versi 1\.0\.1/,
+      name: /Tanggal Tua · Versi 1\.0\.2/,
     });
     await expect(aboutHeading).toBeVisible();
     expect((await aboutHeading.textContent()) ?? '').not.toMatch(/beta|pra-rilis/i);

@@ -2,7 +2,7 @@
 
 > Bertahan sampai kiriman berikutnya.
 
-[![Versi](https://img.shields.io/badge/versi-1.0.1-2B3A8C.svg)](CHANGELOG.md)
+[![Versi](https://img.shields.io/badge/versi-1.0.2-2B3A8C.svg)](CHANGELOG.md)
 [![Lisensi MIT](https://img.shields.io/badge/lisensi-MIT-1D5C3A.svg)](LICENSE)
 
 Aplikasi pencatat keuangan harian (*Progressive Web App*, *mobile-first*, *local-first*) untuk mahasiswa dan Gen Z di Indonesia yang langsung menjawab pertanyaan praktis setiap hari: **"Hari ini aku masih boleh jajan berapa?"**

@@ -99,7 +99,7 @@ Bagian ini menjelaskan *mengapa* keputusan produk diambil, agar agent tidak "mem
 | F11 | Ringkasan (0.3.0) | Ringkasan mingguan/bulanan, chart donut per kategori, chart batang harian, perbandingan adil periode lalu, serta filter kategori+rentang di Riwayat. |
 | F12 | Insight (1.0.0) | Kartu 1-3 insight berbasis aturan (`R4 -> R1 -> R2 -> R3`) pada Ringkasan dengan kontrol aksesibel "Kenapa muncul?". |
 | F13 | Streak & dayMark (1.0.0) | Pil streak ramah + kalender 14 hari + penanda "Hari ini tidak ada pengeluaran" dengan Undo. |
-| F14 | Target tabungan (1.0.0) | Hingga 3 target aktif (`/target`, `/target/:id`), proyeksi harian, setor/tarik atomik, tandai terbeli, arsip dengan pengembalian saldo otomatis. |
+| F14 | Target tabungan (1.0.0 / 1.0.2) | Hingga 3 target aktif (`/target`, `/target/:id`), ubah target aktif, hapus permanen dengan Batalkan 5 detik, sembunyikan target selesai, lihat arsip, proyeksi harian, setor/tarik atomik, tandai terbeli, arsip dengan pengembalian saldo otomatis. |
 | F15 | Anggaran kategori (1.0.0) | Batas mingguan/bulanan per kategori (`/anggaran`), toast ambang 80%/100%, peringatan Beranda, ringkasan 3 teratas. |
 | F16 | Pengingat, shortcut & pelindung data (1.0.0) | Pengingat lokal + ekspor kalender `.ics`, shortcut ikon (`/?aksi=catat`, `/ringkasan`), pengingat backup 30 hari, panduan iOS, status penyimpanan permanen. |
 
@@ -135,7 +135,10 @@ Bagian ini menjelaskan *mengapa* keputusan produk diambil, agar agent tidak "mem
 - `daysLeft = nextPayday − today` dalam hari kalender. Hari ini dihitung, hari kiriman tidak dihitung. Contoh: 18 Nov → 1 Des = **13 hari**.
 - `currentBalance = openingBalance + Σincome + Σadjustment − Σexpense` (semua transaksi dengan `date >= openingDate`, termasuk setoran/tarik target tabungan sehingga setoran menabung mengurangi saldo bebas dan penarikan mengembalikan saldo bebas).
 - `spentToday = Σ expense` dengan `date == today` **tidak termasuk** `adjustment` maupun transaksi bertaut target tabungan (`goalId != null`).
-- **Aturan tabungan (`src/domain/savings.ts`, `src/domain/goals.ts`):** maksimal 3 target `'active'`; setoran/penarikan memakai kategori sistem `cat-tabungan` (`Tabungan`) dan `cat-tarik-tabungan` (`Tarik tabungan`); transaksi dengan `goalId != null` tidak masuk total pengeluaran/pemasukan Ringkasan, tidak muncul di pemilih form reguler, dan terkunci dari ubah/hapus langsung di Riwayat.
+- **Aturan tabungan (`src/domain/savings.ts`, `src/domain/goals.ts`):**
+  - Maksimal 3 target berstatus `'active'`; setoran/penarikan memakai kategori sistem `cat-tabungan` (`Tabungan`) dan `cat-tarik-tabungan` (`Tarik tabungan`); transaksi dengan `goalId` yang merujuk ke target ada di `goals` tidak masuk total pengeluaran/pemasukan Ringkasan, tidak muncul di pemilih form reguler, dan terkunci dari ubah/hapus langsung di Riwayat. Transaksi yatim (yang `goalId`-nya tidak ada di `goals`) diperlakukan sebagai transaksi biasa di Beranda/Riwayat (tanpa label `Tabungan`, dapat diubah/dihapus).
+  - **Ubah target (`1.0.2`):** hanya target `'active'` yang dapat diubah (nama 1-40 karakter dirapikan, nominal 10.000-1.000.000.000, tanggal target > hari ini; `startDate` dan transaksi tidak berubah). Target lewat tanggal tetap bisa dibuka/diubah tanpa error sambil menampilkan `"Lewat tanggal target. Mau ubah tanggalnya?"` serta menyembunyikan saran tabungan dan status jalur hingga diperbaiki. Nominal baru boleh lebih kecil dari tabungan tersimpan (langsung berstatus `"Tercapai"`). `lastMilestone` diperbarui ke milestone terbesar (0/25/50/75/100) yang `<= persentase baru` tanpa toast perayaan. Target `'completed'` dan `'archived'` hanya-baca untuk penyuntingan.
+  - **Hapus & Sembunyikan target (`1.0.2`):** berjalan dalam satu transaksi Dexie dengan toast `"Target dihapus"` dan `"Batalkan"` (5 detik, memulihkan lewat snapshot memori) serta membebaskan kuota 3 target aktif: (1) `'active'` tanpa transaksi -> hapus langsung setelah konfirmasi; (2) `'active'` dengan transaksi -> pilih `"Hapus permanen"` (menghapus target & seluruh transaksi terkait sehingga `saved` kembali ke saldo) atau `"Arsipkan"`; (3) `'archived'` -> boleh hapus permanen; (4) `'completed'` (uang sudah dibelanjakan) **dilarang** dihapus permanen agar tidak memicu saldo palsu, melainkan hanya menawarkan `"Sembunyikan"` (`status = 'archived'` tanpa membuat transaksi `"Tarik tabungan"`, termasuk pada `archiveGoal`). Target `'archived'` tersembunyi dari daftar utama `/target` di balik tautan `"Lihat arsip"`.
 - **Aturan anggaran (`src/domain/budgets.ts`):** 1 anggaran per kategori expense non-sistem (`amount` 1.000 s.d. 1.000.000.000); periode mengikuti `getPeriodRange('week' | 'month')`; `spent` mengecualikan `adjustment` dan transaksi `goalId != null`; state `'aman'` (< 80%), `'hampir'` (80% s.d. < 100%), `'habis'` (>= 100%); penghapusan anggaran hanya menghapus aturan batas tanpa menyentuh transaksi.
 
 ### 5.2 Rumus jatah harian
@@ -490,8 +493,8 @@ tanggal-tua/
 | `/riwayat` | Riwayat | Mendukung query `?kategori=<id>&dari=<start>&sampai=<end>`. |
 | `/ringkasan` | Ringkasan | Lazy-loaded; query `?periode=minggu|bulan&tanggal=YYYY-MM-DD`; memuat Insight, Target tabungan, Anggaran. |
 | `/anggaran` | Anggaran | Lazy-loaded; batas mingguan/bulanan per kategori pengeluaran non-sistem. |
-| `/target` | Target Tabungan | Lazy-loaded; daftar target aktif/riwayat (maks 3 aktif). |
-| `/target/:id` | Detail Target | Lazy-loaded; setor/tarik saldo, tandai terbeli, arsip target. |
+| `/target` | Target Tabungan | Lazy-loaded; daftar target aktif & selesai (maks 3 aktif), tautan `"Lihat arsip"` untuk target `'archived'`. |
+| `/target/:id` | Detail Target | Lazy-loaded; setor/tarik saldo, tandai terbeli, ubah target aktif, hapus permanen (`'active'`/`'archived'`), sembunyikan (`'completed'`), arsip target. |
 | `/pengaturan` | Pengaturan | Tema, jadwal kiriman, pengingat lokal + kalender `.ics`, saldo, template, data, tentang + status persistensi. |
 | (sheet) | Form transaksi | Bottom sheet, bukan rute terpisah (boleh query param `?edit=<id>` agar tombol back bekerja). |
 

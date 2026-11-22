@@ -3,6 +3,19 @@
 Seluruh perubahan penting pada proyek **Tanggal Tua** dicatat di dokumen ini.
 Format mengacu pada [Keep a Changelog](https://keepachangelog.com/id/1.1.0/), dan penomoran versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.0.2] - 2026-11-22
+
+### Added
+- Aksi **Ubah** target tabungan aktif (`/target/:id`) memakai form sheet yang sama dengan Buat target untuk mengubah nama, nominal target, dan tanggal target dengan pembaruan `lastMilestone` aman tanpa toast perayaan palsu serta penanganan target lewat tanggal (`"Lewat tanggal target. Mau ubah tanggalnya?"`).
+- Aksi **Hapus** target tabungan (dalam satu transaksi Dexie dengan toast `"Target dihapus"` dan **"Batalkan"** 5 detik via snapshot memori) mencakup konfirmasi target kosong, dua pilihan (`"Hapus permanen"` atau `"Arsipkan"`) untuk target bertaut transaksi, serta hapus permanen untuk target arsip.
+- Aksi **Sembunyikan** khusus target selesai dibeli (`'completed'`) agar dipindahkan ke arsip tanpa membuat transaksi `"Tarik tabungan"`, dan tautan **"Lihat arsip"** pada daftar `/target`.
+- Tombol **"Batalkan penanda hari ini"** pada `StreakSheet` untuk mencabut penanda hari tanpa pengeluaran (`dayMarks`), serta tombol `"Batalkan"` saat menghapus template catat cepat dan anggaran.
+
+### Fixed
+- Target tabungan yang salah atau tidak lagi dipakai kini bisa diubah atau dihapus permanen sehingga langsung membebaskan kuota 3 target aktif.
+- Transaksi yatim (`goalId` tanpa target di `goals`) tidak lagi terkunci di Riwayat maupun Beranda, tidak menampilkan lencana `"Tabungan"`, dan bebas diubah atau dihapus seperti transaksi biasa.
+- Menghapus seluruh template catat cepat di Pengaturan tidak lagi memunculkan kembali template bawaan saat aktif maupun setelah muat ulang.
+
 ## [1.0.1] - 2026-11-22
 
 ### Changed

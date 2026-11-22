@@ -1,7 +1,7 @@
 {
   "name": "tanggal-tua",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Catat uang jajan, tahu sisa jatah hari ini.",
   "type": "module",
   "engines": {
